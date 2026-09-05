@@ -24,12 +24,33 @@ in this run goes through `execute_sql` (an MCP tool call), never through
 **First step of every run, before anything else:**
 
 ```bash
-git clone <REPO_URL> outreach-bot && cd outreach-bot
+git clone https://x-access-token:$GITHUB_PUSH_TOKEN@github.com/Armaan-Mahajan/memora-outreach-bot.git outreach-bot && cd outreach-bot
 ```
 
-`<REPO_URL>` — fill in once the repo exists; see pipeline-plan.md §7's open
-"where the pipeline repo lives" item. A fresh container has nothing on disk
-otherwise: no templates, no `topics.json`, no `pipeline/` scripts.
+The repo is `Armaan-Mahajan/memora-outreach-bot`, **private**. `$GITHUB_PUSH_TOKEN`
+is the fine-grained PAT (Contents: Read and write, scoped to just this repo)
+this same run needs later for Stage 8's push too -- set once as an
+environment value for the run, never hardcoded. A fresh container has
+nothing on disk otherwise: no templates, no `topics.json`, no `pipeline/`
+scripts.
+
+**UNVERIFIED as of 2026-09-05, capability test pending:** whether a fresh
+scheduled-task container can authenticate git operations against GitHub at
+all. An interactive Cowork session hit a proxy that silently discards any
+credential it's given and only allows repos already on a pre-authorized
+list for that session, with no self-service way to add one -- confirmed by
+direct testing, not assumed (see pipeline-plan.md §7). If a scheduled
+task's container turns out to be gated the same way, this clone step (and
+Stage 8's push) will fail no matter what token they're given, and the
+git-relay upload mechanism needs a different plan for unattended runs. If
+this clone fails with something like "access denied by the git proxy" or
+"not in this session's authorized repository set": **stop and report it
+exactly as-is. Do not try to work around it** (don't unset proxy
+environment variables, don't try alternate hosts/URLs, don't retry with a
+different auth scheme) -- that specific workaround was attempted once,
+during interactive testing, and was blocked by the platform itself before
+it could do anything. Treat a proxy-origin failure here as a hard stop for
+the whole run, not a per-post failure.
 
 Supabase project: `memora-outreach` (id `dtyiuknezuzqohdxicbg`,
 `https://dtyiuknezuzqohdxicbg.supabase.co`). This is the isolated dashboard
@@ -158,20 +179,37 @@ Stage 8's `notes` column rather than discarding the post.
 
 ### Stage 8 — Publish to the queue
 
-**Uploads go through SQL, not the shell** — see pipeline-plan.md's "Getting
-bytes into Storage from the cloud" for why. For each rendered image, in
-slide order:
+**The image is pushed to GitHub first; uploading into Storage happens via a
+tiny SQL call that references its URL, never the image bytes** — see
+pipeline-plan.md's "Getting bytes into Storage from the cloud" for the full
+reasoning, and its §7 for how this was proven end-to-end on 2026-09-05.
+Two steps, per image, in slide order:
+
+**8a. Commit and push the rendered image to `drafts/`:**
 
 ```bash
-python3 pipeline/publish.py upload-sql \
+git add drafts/<format>/<slug>/<NN>.<ext>
+git commit -m "Add <slug> draft"
+git push
+```
+
+If this fails with a proxy/authorization error, stop the whole run and
+report it (see the note on this in "First step of every run" above) —
+don't fall back to any other upload path for this post.
+
+**8b. Build and run the upload SQL:**
+
+```bash
+python3 pipeline/publish.py github-upload-sql \
   --supabase-url "https://dtyiuknezuzqohdxicbg.supabase.co" \
   --anon-key "$SUPABASE_ANON_KEY" \
+  --repo Armaan-Mahajan/memora-outreach-bot \
   --format <format> --slug <slug> --index <1-based index> \
   --image <path to rendered jpg>
 ```
 
-This prints `{"path", "public_url", "sql"}`. Run the `sql` value via
-`execute_sql`, then check the result:
+This prints `{"repo_path", "source_url", "public_url", "sql"}`. Run the
+`sql` value via `execute_sql`, then check the result:
 
 ```sql
 select status_code, content, error_msg from net._http_response where id = <request_id>;
@@ -179,10 +217,15 @@ select status_code, content, error_msg from net._http_response where id = <reque
 
 **Confirm `status_code = 200` and `content` contains `"ok":true` for every
 image before continuing.** Do not build the insert on an unconfirmed
-upload. `$SUPABASE_ANON_KEY` is the legacy anon JWT the `upload-asset` Edge
-Function needs to authenticate the invocation — get it via
-`mcp__Supabase__get_publishable_keys` if it's not already in the
-environment; never hardcode it in a committed file.
+upload — a non-200/non-ok response almost always means the push in 8a
+hasn't landed yet, or the path doesn't match. `$SUPABASE_ANON_KEY` is the
+legacy anon JWT the `upload-asset` Edge Function needs to authenticate the
+invocation — get it via `mcp__Supabase__get_publishable_keys` if it's not
+already in the environment; never hardcode it in a committed file.
+
+**Never use `pipeline/publish.py upload-sql`** (the base64-inlined variant)
+for a real post — it's kept only for tiny test fixtures and is exactly the
+slow, expensive, silently-corruptible mechanism this whole design replaced.
 
 Once every image for this post is confirmed uploaded:
 
