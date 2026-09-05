@@ -239,23 +239,58 @@ Three approaches, in order:
    The deploy key and launchd job are torn down; the Edge Function no
    longer needs `GITHUB_READ_TOKEN`.
 
-3. **Make.com webhook relay (current plan, not yet built).** Same
-   underlying trick — bytes never pass through the orchestrating model's
-   context — without GitHub, git, or any of approach 2's side
-   infrastructure. The cloud shell POSTs the rendered file (multipart,
-   streamed from disk) to a Make.com webhook; Make base64-encodes the
-   buffer server-side and calls the same `upload-asset` Edge Function
-   with `data_base64` — fine here in a way it wasn't in approach 1,
-   because the cost that ruled out inlining was specifically about *the
-   orchestrating model* retyping a giant string, not about the Edge
-   Function's `data_base64` path itself. Not yet confirmed: whether the
-   cloud sandbox's shell can reach Make's webhook ingestion domain at
-   all, and Make's flat 5MB webhook payload cap against this pipeline's
-   8MB render ceiling.
+3. **Make.com webhook relay (tested 2026-09-05, confirmed impossible).**
+   Same underlying trick in theory — bytes never pass through the
+   orchestrating model's context — without GitHub, git, or any of
+   approach 2's side infrastructure. Killed by the first thing it needed
+   to confirm: a credential-free reachability test from both the cloud
+   sandbox's shell AND a Mac linked via the device bridge found neither
+   can reach Make's webhook host at all (`403`, `X-Proxy-Error:
+   blocked-by-allowlist` on the device-side test). This isn't specific to
+   Make — the same test against Supabase's own REST/Storage/Edge-Function
+   host (`dtyiuknezuzqohdxicbg.supabase.co`) failed identically from the
+   cloud sandbox. Every Claude-driven shell's outbound network is
+   restricted to a small allowlist (package registries, Anthropic's own
+   API hosts, private IP ranges) that excludes every third party,
+   Supabase's own host included — which is exactly why approach 1's
+   Edge Function call has to go through `execute_sql`/`pg_net` rather
+   than a direct shell POST in the first place.
+
+   Two other "upload here, hand Make the URL" candidates were checked the
+   same day and ruled out for a different reason: Google Drive's
+   `create_file` and Dropbox's `create_file` both require the file's
+   content as an inline tool-call parameter (`base64Content` on Drive; no
+   binary support at all on Dropbox) — neither has a way to read a local
+   file path server-side, so neither would have avoided the orchestrating
+   model retyping the bytes anyway. Claude Artifacts' asset-upload
+   feature, which *does* read a local file path without retyping, was
+   also checked directly and isn't enabled on this account
+   (`unknown capability: assets` on this runtime contract).
+
+4. **Direct to Supabase, no relay (resolved 2026-09-05, this is what's
+   built).** With every relay candidate ruled out, the orchestrating
+   session just pays approach 1's token cost directly instead of routing
+   around it — the thing that made approach 1 "rejected" was never the
+   mechanism (`execute_sql` + `pg_net` + the Edge Function's
+   `data_base64` path all still work exactly as built and proven
+   2026-09-04), it was the cost landing on the same expensive model doing
+   everything else, in the same context window everything else has to
+   fit in. Two changes make that livable: `publish.py chunk-upload`
+   splits the base64 into small `insert` statements assembled back
+   together *inside Postgres* via `string_agg`, with a `sha256` check
+   (`02_verify.sql`) that catches a dropped or duplicated chunk before it
+   ever reaches the trigger call; and the whole upload step (Stage 8) runs
+   in a fresh Haiku subagent, not the orchestrator itself — Haiku's
+   output pricing is roughly half Sonnet's, and more importantly the
+   60-90k tokens of base64 per image never touch the orchestrator's own
+   context at all. See RUNBOOK.md Stages 8-9 for the exact procedure,
+   including Stage 9's independent (separate-subagent) verification that
+   the stored object's byte size actually matches what was sent, since a
+   corrupted chunk assembly can still return `200`/`ok:true`.
 
 This repo goes back to being just the pipeline's own source (code,
-templates, `topics.json`, this file) — nothing under it relays images
-anymore.
+templates, `topics.json`, this file) — nothing under it relays images,
+and as of the resolution above, nothing outside it does either.
 
 **Open item, needs Armaan's call, not made unilaterally:** whether to
 delete the test object left at
@@ -263,7 +298,13 @@ delete the test object left at
 up via SQL — anon key has no delete policy on that bucket — harmless to
 leave; delete manually from the dashboard if it bothers you).
 
-### Stage 9 — Report
+### Stage 8/9 split (RUNBOOK.md)
+RUNBOOK.md's execution version of this stage is split into Stage 8
+(chunked upload, Haiku subagent) and Stage 9 (independent verification
++ the actual insert) -- see RUNBOOK.md for the exact procedure. This
+file's Stage 8 above covers the reasoning for both halves together.
+
+### Stage 10 — Report
 Log per post: made / flagged / failed, with reasons. The dashboard is the
 real surface; the log is for debugging a bad run.
 
@@ -396,15 +437,19 @@ Steps 0–3 are the session; 4–6 can follow.
   bothers you.
 
 - ~~How rendered bytes actually reach the Edge Function~~ — **RESOLVED
-  2026-09-05, then SUPERSEDED the same day.** Built and proved a git
-  relay through this repo (drafts/ + raw.githubusercontent.com — see
-  "Getting bytes into Storage from the cloud" above for the full
-  history). Retired it in favor of Make.com receiving the bytes directly
-  over a webhook and calling the Edge Function itself: same "never
-  through the model's context" property, none of the git relay's side
-  infrastructure. The SSH deploy key and launchd job are torn down; this
-  repo no longer has anything to do with image delivery, just the
-  pipeline's own source.
+  2026-09-05, SUPERSEDED the same day by a Make.com plan, then RESOLVED
+  AGAIN the same day.** Built and proved a git relay through this repo
+  (drafts/ + raw.githubusercontent.com — see "Getting bytes into Storage
+  from the cloud" above for the full history), retired it for a Make.com
+  webhook relay that was never actually built, then found by direct
+  testing that no Claude-driven shell can reach Make's webhook (or any
+  third party, or even Supabase's own host) at all. Final answer: no
+  relay of any kind. The orchestrating session pays the base64 cost
+  itself via `publish.py chunk-upload`, delegated to a Haiku subagent
+  (RUNBOOK.md Stage 8). The SSH deploy key and launchd job are torn
+  down; this repo no longer has anything to do with image delivery
+  mechanically, just the pipeline's own source and the script that
+  builds the SQL.
 
 **Why the repo had to be pushed from Armaan's own terminal, not a
 Claude-driven shell:** every shell available to Claude in this app --
