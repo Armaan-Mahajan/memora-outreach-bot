@@ -8,48 +8,28 @@ run" version of the same plan.
 
 ## Where you are
 
-**A Cowork scheduled task bound to Armaan's Mac** (`requires_local_device:
-true`), working against the repo's one persistent copy on disk at
-`/Users/armaanmahajan/Documents/Projects/Memora/outreach-bot` via the
-device-bridge shell tool -- **not** a fresh `git clone` into an ephemeral
-cloud container. That distinction matters and took two failed designs to
-get to, both confirmed empirically on 2026-09-05:
+**A Cowork scheduled task — plain, not bound to any device.** This got
+built as a Mac-bound task for a while, specifically to work around an
+unattended-git-push problem (see below); that's no longer needed. Once
+Make.com is handling image delivery (see Stage 8), nothing in this run
+touches git at all, so there's no reason for it to run anywhere but a
+normal cloud container. **Not yet re-confirmed end-to-end as a plain
+cloud task since this change** -- the last thing actually proven working
+was the Mac-bound version, before the redesign below.
 
-- A plain (non-device-bound) Cowork scheduled task, running entirely in
-  the cloud container, cannot push to GitHub at all. Normal permission
-  mode blocks the very first `git clone` at the command-classifier layer.
-  `bypassPermissions` ("skip mode") gets past clone and commit, but `git
-  push` is still rejected by a separate, deeper git-egress proxy ("not in
-  this session's authorized repository set") that skip mode has no effect
-  on. There's no self-service way to add a repo to that proxy's allowed
-  set.
-- So **git push is not this run's job at all.** This run only gets as far
-  as `git commit` (Stage 8a). A plain macOS `launchd` job
-  (`com.armaan.memora-outreach-push`, installed from `scripts/`, see
-  `scripts/SETUP-auto-push.md`) runs independently on Armaan's Mac, as his
-  own user, outside any Claude tool entirely, and pushes whatever's
-  pending on a short timer. It isn't subject to either restriction above
-  because it isn't Claude doing the pushing -- proven working 2026-09-05.
-
-**Implication for sequencing:** because push happens on a timer, not
-synchronously inside this run, there's a short, bounded delay between
-Stage 8a's commit and the file actually being live on
-`raw.githubusercontent.com` for Stage 8b to fetch. See Stage 8b below --
-retry on a miss, don't fail on the first one.
-
-**Start every run with:**
-
-```bash
-cd /Users/armaanmahajan/Documents/Projects/Memora/outreach-bot
-git pull --rebase origin main
-```
-
-Do this even though nothing here should conflict with a direct edit
-elsewhere -- it's cheap, and skipping it is exactly what caused a real
-non-fast-forward push rejection on 2026-09-05 (a manual README edit made
-straight on GitHub's web UI diverged from the local copy). If the rebase
-itself conflicts, stop and report it -- don't resolve a conflict
-unattended.
+For the record, since it's a real platform boundary worth remembering:
+two designs got tried and confirmed empirically on 2026-09-05 before
+landing on "git push just isn't this run's job at all" as the actual
+fix. A plain (non-device-bound) scheduled task can't push to GitHub in
+normal permission mode (blocked at the command-classifier layer on the
+very first `git clone`) or in `bypassPermissions` mode either
+(clone/commit get through, but `git push` is rejected by a separate
+git-egress proxy that skip mode has no effect on). There's no
+self-service way to add a repo to that proxy's allowed set. None of this
+matters for image delivery anymore -- Make.com's webhook relay (Stage 8)
+never touches git -- but keep it in mind if some future stage ever needs
+this run to push to GitHub for a different reason; the same wall is
+still there.
 
 Supabase project: `memora-outreach` (id `dtyiuknezuzqohdxicbg`,
 `https://dtyiuknezuzqohdxicbg.supabase.co`). This is the isolated dashboard
@@ -180,59 +160,33 @@ Stage 8's `notes` column rather than discarding the post.
 
 ### Stage 8 — Publish to the queue
 
-**The image is pushed to GitHub first; uploading into Storage happens via a
-tiny SQL call that references its URL, never the image bytes** — see
-pipeline-plan.md's "Getting bytes into Storage from the cloud" for the full
-reasoning, and its §7 for how this was proven end-to-end on 2026-09-05.
-Two steps, per image, in slide order:
+**Not finalized -- the Make.com integration isn't built yet.** The plan
+(full history of how this got decided is in pipeline-plan.md's "Getting
+bytes into Storage from the cloud"): POST the rendered image (multipart,
+straight from disk) to a Make.com webhook; Make base64-encodes it
+server-side and calls the `upload-asset` Edge Function itself, which
+returns `{ok, bytes_written, public_url}` the same as always. Two things
+still need confirming before this is real, not assumed: whether the
+cloud sandbox's shell can even reach Make's webhook ingestion domain, and
+Make's flat 5MB webhook payload cap against this pipeline's 8MB render
+ceiling.
 
-**8a. Commit the rendered image to `drafts/` -- do not push it yourself:**
-
-```bash
-git add drafts/<format>/<slug>/<NN>.<ext>
-git commit -m "Add <slug> draft"
-```
-
-That's it -- no `git push` here. The `com.armaan.memora-outreach-push`
-launchd job on Armaan's Mac picks up any pending commit and pushes it
-within `StartInterval` seconds (currently 60s -- check
-`scripts/com.armaan.memora-outreach-push.plist` if this changes). If `git
-commit` itself fails for a reason other than "nothing to commit," stop and
-report it -- that's a real local problem, not something the launchd job
-can fix.
-
-**8b. Build and run the upload SQL -- retry on a miss, don't fail on the first one:**
-
-```bash
-python3 pipeline/publish.py github-upload-sql \
-  --supabase-url "https://dtyiuknezuzqohdxicbg.supabase.co" \
-  --anon-key "$SUPABASE_ANON_KEY" \
-  --repo Armaan-Mahajan/memora-outreach-bot \
-  --format <format> --slug <slug> --index <1-based index> \
-  --image <path to rendered jpg>
-```
-
-This prints `{"repo_path", "source_url", "public_url", "sql"}`. Run the
-`sql` value via `execute_sql`, then check the result:
-
-```sql
-select status_code, content, error_msg from net._http_response where id = <request_id>;
-```
-
-**Confirm `status_code = 200` and `content` contains `"ok":true` before
-continuing.** A non-200 here most likely just means the launchd push
-hasn't run yet, not a real failure -- wait ~15-20 seconds and re-run the
-same `github-upload-sql` + `execute_sql` check (the SQL is idempotent,
-safe to re-run). Retry up to 5 times (~90 seconds total) before treating
-it as a genuine failure and reporting this post as failed rather than
-looping longer -- that budget comfortably covers the 60-second push
-interval plus one retry's slack.
+This repo used to double as the image relay -- rendered images got
+pushed to `drafts/`, with a dedicated SSH deploy key and a macOS
+`launchd` job keeping it unattended. That's been torn down on purpose,
+not left half-working, now that Make.com does the same job without any
+of that side infrastructure. If Stage 8 comes up in a run before the
+Make.com integration is finished, **stop and report rather than
+improvising a git-based upload path** -- that door is deliberately
+closed, not just currently broken.
 
 **Never use `pipeline/publish.py upload-sql`** (the base64-inlined variant)
-for a real post -- it's kept only for tiny test fixtures and is exactly the
-slow, expensive, silently-corruptible mechanism this whole design replaced.
+for a real post -- it's kept only for tiny test fixtures, for the same
+reason (an LLM retyping a whole image as base64) that made a relay
+necessary in the first place.
 
-Once every image for this post is confirmed uploaded:
+Once every image for this post is confirmed uploaded (however Stage 8
+ends up confirming that):
 
 ```bash
 python3 pipeline/publish.py insert-sql \

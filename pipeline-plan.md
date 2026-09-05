@@ -196,50 +196,72 @@ a good post is worse than one that arrives with a note on it.
   `single_image` / `slideshow` / `reel` — the insert must supply both and
   use one of those three literal values, not e.g. `single-image`.
 
-#### Getting bytes into Storage from the cloud (confirmed 2026-09-04)
+#### Getting bytes into Storage from the cloud (updated 2026-09-05)
 
 The cloud scheduled task's shell has **no direct route to Supabase
 Storage** — its egress proxy blocks raw HTTPS to `*.supabase.co` (the
 phone capability test hit this directly: a plain upload attempt failed).
-Storage's real backend (the actual file bytes, as opposed to the
-`storage.objects` metadata row) only accepts genuine binary HTTP bodies
-via its REST/TUS/S3 API — there's no SQL-only path to it, and `pg_net`
-(Postgres's async-HTTP extension) can't reach it directly either, since
-`pg_net` **only supports JSON-bodied POST** (no PUT/PATCH, no raw binary).
+Storage's real backend only accepts genuine binary HTTP bodies via its
+REST/TUS/S3 API — there's no SQL-only path to it, and `pg_net` can't
+reach it directly either, since it only supports JSON-bodied POST.
 
-The workaround, verified end-to-end rather than assumed: a small Supabase
-**Edge Function** (`upload-asset`, source in `upload-asset-edge-fn.ts`,
-deployed on `memora-outreach`) that accepts `{bucket, path, contentType,
-data_base64}` as JSON, decodes the base64 server-side, and writes it to
-Storage using the service-role client. `pg_net` **can** invoke an Edge
-Function with a JSON body (a documented pattern), and the whole call is
-triggered via `execute_sql` — which is proxied *outside* the sandbox's
-restricted egress (already proven working for ordinary Supabase reads/
-writes). So the only network hop that touches `*.supabase.co` directly
-happens on Supabase's own infrastructure (pg_net → Edge Function → Storage),
-never through the run's own blocked shell.
+Three approaches, in order:
 
-Live-tested on 2026-09-04: a real `net.http_post` call through
-`execute_sql` invoked `upload-asset` with a small PNG payload, got back
-`{"ok":true,"bytes_written":68,"public_url":"..."}`, and the object was
-independently confirmed to exist in `storage.objects` with the right size
-and mimetype. Mechanism confirmed working; not yet load-tested at a real
-JPEG's size (100–400 KB base64), though nothing in pg_net's documented
-limits (JSON-POST-only, ~200 req/sec, 6h response retention) suggests a
-body-size ceiling that would matter at that scale.
+1. **Base64 straight through a SQL insert (2026-09-04, rejected same
+   day).** A Supabase **Edge Function** (`upload-asset`, source in
+   `upload-asset-edge-fn.ts`, deployed on `memora-outreach`) accepts
+   `{bucket, path, contentType, data_base64}`, decodes it server-side,
+   and writes it to Storage with the service-role client — proven
+   working on a tiny fixture (68 bytes, `{"ok":true,...}` confirmed
+   independently in `storage.objects`). The problem was never the
+   mechanism, it was the caller: getting a real ~200KB image there means
+   the orchestrating model retyping a 250,000+ character base64 string
+   as its own tool-call text — slow, expensive, and a single flipped
+   character silently corrupts the image. Kept only for genuinely tiny
+   test fixtures (`publish.py upload-sql`), never for a real post.
 
-**Fallback if this ever proves fragile in production:** host rendered
-assets in the same git repo the pipeline already clones from (§1) and
-reference their raw GitHub URLs as `asset_urls` instead of Supabase
-Storage. GitHub connectivity is independently confirmed reachable from
-the cloud shell. Not needed given the above works, but cheap to keep in
-mind.
+2. **Git relay through this repo (built and proven 2026-09-05, retired
+   the same day).** The rendered image got pushed to
+   `drafts/<format>/<slug>/NN.ext` in this repo, and the same Edge
+   Function fetched it server-side from its `raw.githubusercontent.com`
+   URL instead of taking bytes inline (Edge Function v3 added a
+   `GITHUB_READ_TOKEN` secret to authenticate against the private repo).
+   Proven end-to-end on a real post, not a fixture:
+   `flashcards-adapt-lechatelier`'s image was committed, fetched (200
+   OK, byte count matched, image verified visually), and queued into
+   `outreach_drafts` (row `cfb628d5-e3c2-4387-bcc4-36531c000a63`). It
+   worked specifically because git streams a file from disk over its own
+   connection — the orchestrating model's context never saw the bytes,
+   solving approach 1's exact problem. The catch: keeping it unattended
+   needed a dedicated SSH deploy key, a macOS `launchd` job polling for
+   pending commits, and that repo-scoped `GITHUB_READ_TOKEN` — a lot of
+   standing infrastructure whose only job was getting bytes past a wall.
+   The deploy key and launchd job are torn down; the Edge Function no
+   longer needs `GITHUB_READ_TOKEN`.
 
-**Open item, needs Armaan's call, not made unilaterally:** whether to keep
-`pg_net` + the `upload-asset` Edge Function as permanent project
-infrastructure now that it's proven, or tear it down and revisit at build
-time; and whether to delete the test object left at
-`outreach-assets/test/capability-check-pgnet-tiny.png`.
+3. **Make.com webhook relay (current plan, not yet built).** Same
+   underlying trick — bytes never pass through the orchestrating model's
+   context — without GitHub, git, or any of approach 2's side
+   infrastructure. The cloud shell POSTs the rendered file (multipart,
+   streamed from disk) to a Make.com webhook; Make base64-encodes the
+   buffer server-side and calls the same `upload-asset` Edge Function
+   with `data_base64` — fine here in a way it wasn't in approach 1,
+   because the cost that ruled out inlining was specifically about *the
+   orchestrating model* retyping a giant string, not about the Edge
+   Function's `data_base64` path itself. Not yet confirmed: whether the
+   cloud sandbox's shell can reach Make's webhook ingestion domain at
+   all, and Make's flat 5MB webhook payload cap against this pipeline's
+   8MB render ceiling.
+
+This repo goes back to being just the pipeline's own source (code,
+templates, `topics.json`, this file) — nothing under it relays images
+anymore.
+
+**Open item, needs Armaan's call, not made unilaterally:** whether to
+delete the test object left at
+`outreach-assets/test/capability-check-pgnet-tiny.png` (can't be cleaned
+up via SQL — anon key has no delete policy on that bucket — harmless to
+leave; delete manually from the dashboard if it bothers you).
 
 ### Stage 9 — Report
 Log per post: made / flagged / failed, with reasons. The dashboard is the
@@ -372,6 +394,17 @@ Steps 0–3 are the session; 4–6 can follow.
   can't be cleaned up via SQL (anon key has no delete policy on that
   bucket) -- harmless to leave; delete manually from the dashboard if it
   bothers you.
+
+- ~~How rendered bytes actually reach the Edge Function~~ — **RESOLVED
+  2026-09-05, then SUPERSEDED the same day.** Built and proved a git
+  relay through this repo (drafts/ + raw.githubusercontent.com — see
+  "Getting bytes into Storage from the cloud" above for the full
+  history). Retired it in favor of Make.com receiving the bytes directly
+  over a webhook and calling the Edge Function itself: same "never
+  through the model's context" property, none of the git relay's side
+  infrastructure. The SSH deploy key and launchd job are torn down; this
+  repo no longer has anything to do with image delivery, just the
+  pipeline's own source.
 
 **Why the repo had to be pushed from Armaan's own terminal, not a
 Claude-driven shell:** every shell available to Claude in this app --

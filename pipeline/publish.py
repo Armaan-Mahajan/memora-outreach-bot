@@ -16,67 +16,50 @@ Supabase Storage directly (egress is blocked), so uploads go through the
 through execute_sql -- which IS proxied outside the sandbox's blocked
 egress.
 
-THREE upload-related commands exist here:
+Image delivery used to run through this repo: a real post's rendered image
+was pushed to drafts/<format>/<slug>/NN.ext, and a github-upload-sql
+command here built the net.http_post call pointing the Edge Function at
+that file's raw.githubusercontent.com URL. It worked, but existed purely
+to get bytes past a wall (git streams from disk, no LLM retyping) and
+needed a whole side apparatus to stay unattended: a dedicated SSH deploy
+key, a macOS job polling for pending commits, and a repo-scoped read token
+on the Edge Function. Removed 2026-09-05 -- Make.com now receives the
+rendered bytes directly over a webhook (streamed from disk, same property
+git had) and calls the Edge Function itself with the bytes inlined, since
+the cost that ruled out inlining was always about the orchestrating model
+retyping a big string, not about the mechanism. One fewer credential, one
+fewer moving part, and image delivery no longer has anything to do with
+this repo. See pipeline-plan.md for the full history of why this changed.
 
-  github-upload-sql: the real path for every actual post. The rendered
-    image is committed and pushed to drafts/<format>/<slug>/NN.ext in this
-    repo FIRST (a plain `git add && git commit && git push` -- git streams
-    the file from disk over its own connection, so the bytes never pass
-    through the orchestrator's context at all). This command then builds a
-    net.http_post call whose body is just {bucket, path, source_url} --
-    source_url pointing at that file's raw.githubusercontent.com URL. The
-    Edge Function fetches it server-side (Supabase's infra has normal
-    internet access) and writes it to Storage. Nothing but a short URL
-    string ever touches the orchestrating model's context.
+TWO upload-related commands remain here:
 
-  upload-sql: the same net.http_post shape, but with the image's raw
-    base64 inlined into the call as data_base64 instead of a source_url.
-    Only for genuinely tiny fixtures (a test image a few hundred bytes) --
-    for anything real, the orchestrator would have to read and retype the
-    entire base64 payload as its own tool-call text to get here, which is
-    exactly the slow, expensive, silently-corruptible failure mode
-    github-upload-sql exists to avoid. Do not reach for this for a real
-    rendered post.
+  upload-sql: net.http_post with the image's raw base64 inlined as
+    data_base64. Still fine for genuinely tiny fixtures (a test image a
+    few hundred bytes) and for manual debugging -- for a real post, Make's
+    webhook relay is the actual path now, not this script.
 
   insert-sql: queues the actual outreach_drafts row once every image for
-    a post is confirmed uploaded (200 OK, checked via net._http_response).
+    a post is confirmed uploaded (200 OK, checked via net._http_response,
+    or whatever confirmation Make's relay returns).
 
 Credentials are never hardcoded here -- this file goes into a git repo.
 Pass them as arguments or set the environment variables named below.
 
-Usage, real posts (three steps):
+Usage:
 
-  1. Commit and push the rendered image(s) to drafts/, e.g.:
-       git add drafts/single_image/my-post-slug/01.jpg
-       git commit -m "Add my-post-slug draft"
-       git push
+  python3 publish.py insert-sql \\
+    --format single_image --feature agent --layout flow-outline \\
+    --archetype feature-highlight \\
+    --content content.json --asset-urls url1 [url2 ...] \\
+    --notes "optional Stage 3/7 flags"
 
-  2. One call per image, in slide order:
-       python3 publish.py github-upload-sql \\
-         --supabase-url "$SUPABASE_URL" --anon-key "$SUPABASE_ANON_KEY" \\
-         --repo Armaan-Mahajan/memora-outreach-bot \\
-         --format single_image --slug my-post-slug --index 1 \\
-         --image output/stat-hero/my-post-slug.jpg
-     Prints one JSON object: {"repo_path", "source_url", "public_url", "sql"}.
-     The orchestrator runs `sql` via execute_sql for each image, then checks
-     net._http_response for that request's status_code (200) and that the
-     body's "ok" is true before continuing -- do not build the insert below
-     on an unconfirmed upload. A non-200/non-ok response usually means the
-     push in step 1 hasn't landed yet, or the repo path is wrong.
-
-  3. Once every upload is confirmed:
-       python3 publish.py insert-sql \\
-         --format single_image --feature agent --layout flow-outline \\
-         --archetype feature-highlight \\
-         --content content.json --asset-urls url1 [url2 ...] \\
-         --notes "optional Stage 3/7 flags"
-     Prints one JSON object: {"sql": "insert into outreach_drafts ... ;"}.
-     The orchestrator runs this once via execute_sql to actually queue the
-     draft. format/feature/archetype/layout/topic map straight onto the
-     outreach_drafts columns -- format must be exactly one of
-     single_image / slideshow / reel (the table's CHECK constraint; note
-     the underscore, not a hyphen), and format + feature are NOT NULL on
-     the real table (confirmed 2026-09-04's capability test).
+  Prints one JSON object: {"sql": "insert into outreach_drafts ... ;"}.
+  The orchestrator runs this once via execute_sql to actually queue the
+  draft. format/feature/archetype/layout/topic map straight onto the
+  outreach_drafts columns -- format must be exactly one of
+  single_image / slideshow / reel (the table's CHECK constraint; note
+  the underscore, not a hyphen), and format + feature are NOT NULL on
+  the real table (confirmed 2026-09-04's capability test).
 """
 import argparse
 import base64
@@ -85,8 +68,6 @@ import os
 import sys
 
 DEFAULT_BUCKET = "outreach-assets"
-DEFAULT_REPO = "Armaan-Mahajan/memora-outreach-bot"
-DEFAULT_BRANCH = "main"
 
 
 def sql_string(value) -> str:
@@ -142,33 +123,6 @@ def _net_http_post_sql(supabase_url, anon_key, body):
         "  timeout_milliseconds := 15000\n"
         ") as request_id;"
     )
-
-
-def cmd_github_upload_sql(args):
-    supabase_url, anon_key = _resolve_creds(args)
-
-    bytes_len = os.path.getsize(args.image)
-    _, content_type, storage_path = _image_meta(args.image, args.format, args.slug, args.index)
-    repo_path = f"drafts/{storage_path}"
-    source_url = f"https://raw.githubusercontent.com/{args.repo}/{args.branch}/{repo_path}"
-    public_url = f"{supabase_url.rstrip('/')}/storage/v1/object/public/{args.bucket}/{storage_path}"
-
-    body = {
-        "bucket": args.bucket,
-        "path": storage_path,
-        "contentType": content_type,
-        "source_url": source_url,
-    }
-    sql = _net_http_post_sql(supabase_url, anon_key, body)
-
-    print(json.dumps({
-        "repo_path": repo_path,
-        "source_url": source_url,
-        "storage_path": storage_path,
-        "public_url": public_url,
-        "bytes": bytes_len,
-        "sql": sql,
-    }, indent=2))
 
 
 def cmd_upload_sql(args):
@@ -233,18 +187,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    gh = sub.add_parser("github-upload-sql", help="build the net.http_post SQL for an image already pushed to drafts/ -- use this for real posts")
-    gh.add_argument("--supabase-url", help="e.g. https://xxxx.supabase.co (or set SUPABASE_URL)")
-    gh.add_argument("--anon-key", help="legacy anon JWT (or set SUPABASE_ANON_KEY) -- never hardcode this")
-    gh.add_argument("--bucket", default=DEFAULT_BUCKET)
-    gh.add_argument("--repo", default=DEFAULT_REPO, help="owner/repo on GitHub, e.g. Armaan-Mahajan/memora-outreach-bot")
-    gh.add_argument("--branch", default=DEFAULT_BRANCH)
-    gh.add_argument("--format", required=True, choices=["single_image", "slideshow", "reel"])
-    gh.add_argument("--slug", required=True)
-    gh.add_argument("--index", type=int, default=1, help="slide number, 1-based (single_image is always 1)")
-    gh.add_argument("--image", required=True, help="local path to the rendered JPEG (must already be pushed to the matching drafts/ path)")
-    gh.set_defaults(func=cmd_github_upload_sql)
-
     up = sub.add_parser("upload-sql", help="build the net.http_post SQL with base64 inlined -- tiny test fixtures ONLY, never a real post")
     up.add_argument("--supabase-url", help="e.g. https://xxxx.supabase.co (or set SUPABASE_URL)")
     up.add_argument("--anon-key", help="legacy anon JWT (or set SUPABASE_ANON_KEY) -- never hardcode this")
@@ -264,7 +206,7 @@ def main():
     ins.add_argument("--content", required=True, help="path to the rendered content JSON")
     ins.add_argument("--caption", help="overrides content.json's caption field if given")
     ins.add_argument("--hashtags", nargs="*", help="overrides content.json's hashtags field if given")
-    ins.add_argument("--asset-urls", nargs="+", required=True, help="public_url values from upload-sql/github-upload-sql, in slide order")
+    ins.add_argument("--asset-urls", nargs="+", required=True, help="public_url values -- from upload-sql, or from whatever Make.com's relay returns -- in slide order")
     ins.add_argument("--notes", help="Stage 3/7 flags to seed the notes column with")
     ins.set_defaults(func=cmd_insert_sql)
 
