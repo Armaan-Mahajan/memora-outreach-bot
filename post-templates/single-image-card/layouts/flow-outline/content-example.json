@@ -1,0 +1,15 @@
+{
+  "slug": "feature-card-agent",
+  "badge_text": "Exclusive",
+  "eyebrow": "Memora Agent",
+  "headline": "Transform your syllabus into a full interactive course.",
+  "subhead": "Automatically. Available only on Memora.",
+  "outline_title": "Generated Course Outline",
+  "outline_items": [
+    "Unit 1 — Foundations & key definitions",
+    "Unit 2 — Core mechanisms, worked examples",
+    "Unit 3 — Applications & practice questions"
+  ],
+  "cta_text": "Try Agent",
+  "footer_note": "Link in bio"
+}

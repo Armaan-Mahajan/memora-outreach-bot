@@ -1,0 +1,320 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: "Inter";
+    font-weight: 500;
+    src: url("inter-latin-500-normal.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Inter";
+    font-weight: 600;
+    src: url("inter-latin-600-normal.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Inter";
+    font-weight: 700;
+    src: url("inter-latin-700-normal.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Inter";
+    font-weight: 800;
+    src: url("inter-latin-800-normal.woff2") format("woff2");
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1080px;
+    height: 1350px;
+    background: #171717;
+    font-family: "Inter", -apple-system, "system-ui", "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ambient brand glow, echoing the glass/gradient motif from the live site */
+  .glow-a {
+    position: absolute;
+    top: -180px; left: -220px;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(139,92,246,0.30) 0%, rgba(139,92,246,0) 70%);
+    filter: blur(10px);
+  }
+  .glow-b {
+    position: absolute;
+    bottom: -260px; right: -240px;
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 70%);
+    filter: blur(10px);
+  }
+
+  .frame {
+    position: relative;
+    width: 1080px;
+    height: 1350px;
+    padding: 72px 76px 64px 76px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .brand-icon {
+    width: 60px; height: 60px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(139,92,246,0.35);
+  }
+  .brand-icon img { width: 100%; height: 100%; display: block; }
+  .brand-name {
+    color: #ffffff;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 22px;
+    border-radius: 999px;
+    background: rgba(139,92,246,0.16);
+    border: 1px solid rgba(167,139,250,0.45);
+    color: #c4b5fd;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* headline block */
+  .headline-block {
+    margin-top: 76px;
+  }
+  .eyebrow {
+    color: #93c5fd;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  h1 {
+    color: #ffffff;
+    font-size: 72px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+  }
+  .subhead {
+    margin-top: 26px;
+    color: #a1a1aa;
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.4;
+    max-width: 860px;
+  }
+
+  /* flow diagram panel */
+  .panel {
+    margin-top: 56px;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 28px;
+    padding: 48px 44px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 44px;
+  }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .flow-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 220px;
+  }
+  .node-icon {
+    width: 96px; height: 96px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(139,92,246,0.22), rgba(59,130,246,0.22));
+    border: 1px solid rgba(167,139,250,0.35);
+  }
+  .node-icon.agent {
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    border: none;
+    box-shadow: 0 10px 28px rgba(99,102,241,0.45);
+  }
+  .node-icon svg { width: 46px; height: 46px; }
+  .node-label {
+    color: #e4e4e7;
+    font-size: 24px;
+    font-weight: 600;
+  }
+  .flow-arrow {
+    color: #52525b;
+    width: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: -40px;
+  }
+  .flow-arrow svg { width: 40px; height: 40px; }
+
+  .outline {
+    background: rgba(0,0,0,0.28);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px;
+    padding: 30px 34px;
+  }
+  .outline-title {
+    color: #71717a;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .outline-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #d4d4d8;
+    font-size: 25px;
+    font-weight: 500;
+    padding: 10px 0;
+  }
+  .outline-item:not(:last-child) {
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .outline-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    flex-shrink: 0;
+  }
+
+  /* footer / CTA */
+  .footer {
+    margin-top: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 22px 46px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    color: #ffffff;
+    font-size: 30px;
+    font-weight: 700;
+    box-shadow: 0 12px 30px rgba(99,102,241,0.4);
+  }
+  .cta svg { width: 26px; height: 26px; }
+  .link-in-bio {
+    color: #71717a;
+    font-size: 24px;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+  <div class="glow-a"></div>
+  <div class="glow-b"></div>
+  <div class="frame">
+
+    <div class="header">
+      <div class="brand">
+        <div class="brand-icon"><img src="social-media-logo-inverted.png"></div>
+        <div class="brand-name">Memora</div>
+      </div>
+      <div class="badge">Exclusive</div>
+    </div>
+
+    <div class="headline-block">
+      <div class="eyebrow">Memora Agent</div>
+      <h1>Transform your syllabus into a full interactive course.</h1>
+      <div class="subhead">Automatically. Available only on Memora.</div>
+    </div>
+
+    <div class="panel">
+      <div class="flow">
+        <div class="flow-node">
+          <div class="node-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <path d="M14 2v6h6"/>
+              <line x1="9" y1="13" x2="15" y2="13"/>
+              <line x1="9" y1="17" x2="15" y2="17"/>
+            </svg>
+          </div>
+          <div class="node-label">Syllabus</div>
+        </div>
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </div>
+        <div class="flow-node">
+          <div class="node-icon agent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              <circle cx="12" cy="12" r="3.3"/>
+            </svg>
+          </div>
+          <div class="node-label">Agent</div>
+        </div>
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </div>
+        <div class="flow-node">
+          <div class="node-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+          </div>
+          <div class="node-label">Course</div>
+        </div>
+      </div>
+
+      <div class="outline">
+        <div class="outline-title">Generated Course Outline</div>
+        <div class="outline-item"><span class="outline-dot"></span>Unit 1 — Foundations &amp; key definitions</div>
+        <div class="outline-item"><span class="outline-dot"></span>Unit 2 — Core mechanisms, worked examples</div>
+        <div class="outline-item"><span class="outline-dot"></span>Unit 3 — Applications &amp; practice questions</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="cta">
+        Try Agent
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+      <div class="link-in-bio">Link in bio</div>
+    </div>
+
+  </div>
+</body>
+</html>

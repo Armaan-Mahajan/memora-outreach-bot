@@ -1,0 +1,191 @@
+{
+  "_meta": {
+    "description": "Curated micro-lesson / technique topic allowlist for slideshow posts. Stage 1 (assign.py) rotates through this list; Stage 2 is NOT allowed to write about anything outside it. The bot may propose additions -- a human approves them before they're added here.",
+    "selection_rules": [
+      "Stable, well-established material only -- nothing at the edge of active scientific/scholarly dispute.",
+      "Nothing where curricula meaningfully disagree on the substance or the 'right' framing -- a real hazard across the product's actual curriculum list (IB MYP/DP, AP, AQA, CBSE, CXC, Edexcel, French Bac, German Abitur, ICSE, NSW HSC, Cambridge IGCSE, VCE, WJEC). safe_for below is deliberately conservative.",
+      "Nothing that needs a diagram to teach -- slideshows explicitly carry no diagrams or graphs (a wrong diagram is confidently wrong and slips past review because it looks like a diagram).",
+      "No live policy/political framing -- economics and psychology entries stick to mechanism and definition, not current-events application.",
+      "safe_for 'all' means genuinely curriculum-agnostic (a physical law, a mathematical identity, a definitional concept taught the same way everywhere); anything narrower says which boards it's been checked against.",
+      "archetype is 'micro-lesson' for curriculum content, 'technique' for study-skills content that isn't tied to any subject."
+    ]
+  },
+  "topics": [
+    {
+      "subject": "Chemistry",
+      "topic": "Le Chatelier's principle",
+      "slug": "lechatelier-principle",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Already built as the first example deck (post-templates/slideshow/output/lechatelier-principle/). Equilibrium shift direction is universal chemistry, no diagram needed -- describable via the equilibrium expression and qualitative shift rules."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Strong vs. weak acids and bases",
+      "slug": "strong-weak-acids-bases",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Dissociation-based definition (Arrhenius/Brønsted-Lowry) is taught consistently across boards; avoid drifting into pH-calculation edge cases that vary by syllabus depth."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Oxidation states and redox reactions",
+      "slug": "oxidation-states-redox",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Electron-transfer framing (OIL RIG) is universal. Stick to identifying oxidation/reduction, not balancing complex half-equations, which varies by board depth."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Cellular respiration and the electron transport chain",
+      "slug": "cellular-respiration-etc",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Already used as the flashcard-mockup layout's example content. Core biochemistry, no live dispute, describable without a pathway diagram (stages + net ATP yield in words)."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Natural selection vs. genetic drift",
+      "slug": "natural-selection-genetic-drift",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Foundational, non-controversial evolutionary biology distinction (selection vs. random allele-frequency change) taught identically everywhere."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Osmosis vs. diffusion",
+      "slug": "osmosis-vs-diffusion",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Classic intro-biology distinction, definitional, no diagram required to explain correctly."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Newton's third law, correctly stated",
+      "slug": "newtons-third-law",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Targets the most common misconception (forces act on DIFFERENT objects, so they never cancel) -- a classic 'sounds obvious, is usually misunderstood' micro-lesson. Universal, no diagram needed."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Why a satellite in orbit isn't 'zero gravity'",
+      "slug": "orbital-mechanics-not-zero-gravity",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Free-fall framing of orbits is standard physics, addresses a widespread misconception, explainable purely verbally/algebraically."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Conservation of momentum in collisions",
+      "slug": "conservation-of-momentum",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Core mechanics, universal across boards. Stick to the principle and elastic-vs-inelastic definitions, not diagram-dependent vector problems."
+    },
+    {
+      "subject": "Math",
+      "topic": "Why dividing by zero is undefined, not infinity",
+      "slug": "division-by-zero-undefined",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Pure math identity, zero curriculum disagreement, and a genuinely common point of confusion -- good hook value."
+    },
+    {
+      "subject": "Math",
+      "topic": "The difference between correlation and causation",
+      "slug": "correlation-vs-causation",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Statistics fundamental taught the same way in every math/science curriculum; no diagram needed, just examples."
+    },
+    {
+      "subject": "Math",
+      "topic": "What a derivative actually measures (instantaneous rate of change)",
+      "slug": "derivative-rate-of-change",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Conceptual (not mechanical/procedural) framing avoids notation differences across boards (Leibniz vs. Lagrange) -- keep it to the idea, not a worked differentiation example."
+    },
+    {
+      "subject": "Math",
+      "topic": "The Pythagorean theorem, and why it only works on right triangles",
+      "slug": "pythagorean-theorem",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal, ancient, undisputed. Describable algebraically without a triangle diagram."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Opportunity cost, with a non-money example",
+      "slug": "opportunity-cost",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Core micro concept taught identically across IB/AP/A-level econ. Deliberately avoid current policy examples -- use time/choice examples instead."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Supply and demand: what actually shifts a curve vs. moves along it",
+      "slug": "supply-demand-shift-vs-move",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Classic misconception-correction micro-lesson. Mechanism-only, no policy framing, describable without an actual graph."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Price elasticity of demand, conceptually",
+      "slug": "price-elasticity-of-demand",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional and universal; stick to the concept and a couple of intuitive examples (necessities vs. luxuries), not board-specific formula notation."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "Classical conditioning (Pavlov), correctly distinguished from operant conditioning",
+      "slug": "classical-vs-operant-conditioning",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Foundational, textbook-standard, zero live dispute about the mechanism itself. Avoid discussing the historical Little Albert study's ethics in depth -- name the concept, not the case study's controversy."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "The forgetting curve and why spaced repetition works",
+      "slug": "forgetting-curve-spaced-repetition",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Directly ties to Memora's own Flashcards mechanism (spaced/adaptive review) -- a natural bridge from teaching a real concept to the product without an explicit pitch. Ebbinghaus's forgetting curve is well-established and undisputed at this level of description."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "Confirmation bias, with an everyday (non-political) example",
+      "slug": "confirmation-bias",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal cognitive-bias concept. Explicitly use an everyday example (e.g. sports fandom, shopping decisions) rather than a political or social one to stay inside the no-live-controversy rule."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Denotation vs. connotation",
+      "slug": "denotation-vs-connotation",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal literary-analysis vocabulary distinction, no text-specific interpretation required, so no curriculum-specific reading-list dependency."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Why re-reading notes feels like studying but isn't (the fluency illusion)",
+      "slug": "fluency-illusion-rereading",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Cognitive-science-backed study-skills concept (not curriculum content, so 'safe_for: all' by construction) -- pairs naturally with Memora's active-recall-based tools."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Active recall vs. passive review",
+      "slug": "active-recall-vs-passive-review",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Well-established learning-science distinction, universal, directly relevant to Flashcards/Quizzes without being a direct product pitch."
+    }
+  ]
+}
