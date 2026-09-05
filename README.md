@@ -1,6 +1,8 @@
 # memora-outreach-bot
 
-Instagram growth automation for [Memora](https://the-memora.com) — the AI study tool I'm building for 13-18 year-olds. This bot finds Instagram accounts worth engaging with, drafts posts about what Memora actually does, and queues them up for me to look at before anything gets anywhere near the real account. Nothing here auto-posts. That's on purpose, for now.
+Instagram growth automation for [Memora](https://the-memora.com) — the AI study tool I'm building for 13-18 year-olds. This bot finds Instagram accounts worth engaging with, drafts posts about what Memora actually does, and queues them up for me to look at before anything gets anywhere near the real account. Nothing here auto-posts. That's on purpose, for now. 
+
+This repository is currently public so that Claude can access it when the scheduled task runs (1AM IST every day).
 
 ## what this actually does
 
