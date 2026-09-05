@@ -11,11 +11,13 @@
         <string>/Users/armaanmahajan/Documents/Projects/Memora/outreach-bot/scripts/auto-push.sh</string>
     </array>
 
-    <!-- Runs every 15 minutes. Adjust to taste -- this just needs to be
-         more frequent than you care about the delay between a local commit
-         landing and it showing up on GitHub. -->
+    <!-- Runs every 60 seconds. Short on purpose: Stage 8b of the pipeline
+         (RUNBOOK.md) fetches the just-committed image back from
+         raw.githubusercontent.com right after Stage 8a commits it, and
+         retries a handful of times rather than failing outright -- keeping
+         this interval short keeps that wait (and retry budget) short too. -->
     <key>StartInterval</key>
-    <integer>900</integer>
+    <integer>60</integer>
 
     <key>RunAtLoad</key>
     <false/>

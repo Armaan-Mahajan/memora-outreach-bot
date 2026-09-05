@@ -12,7 +12,7 @@ plain macOS scheduled job (`launchd`), running as Armaan's own user, doing
 exactly what a manual `git push` from Terminal already does successfully.
 Claude's automation still does everything up through the local `git commit`
 (via device_bash on the mounted repo); this job just notices new local
-commits every 15 minutes and pushes them to GitHub.
+commits every 60 seconds and pushes them to GitHub.
 
 Everything below has to be run in a real Terminal window on the Mac --
 none of it is possible through the Cowork device bridge (that shell is an
@@ -94,7 +94,7 @@ tail -f ~/Library/Logs/memora-outreach-push.log
 
 The log stays empty until there's actually something to push (the script
 is deliberately quiet on no-op runs). Make a throwaway local commit and
-wait up to 15 minutes to see it show up pushed and logged.
+wait up to a minute to see it show up pushed and logged.
 
 ## Uninstalling
 

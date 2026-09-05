@@ -8,53 +8,54 @@ run" version of the same plan.
 
 ## Where you are
 
-**A Cowork scheduled task running entirely in the cloud container — no
-device binding, and nothing here touches Armaan's Mac.** This isn't
-assumed, it's been checked (see pipeline-plan.md §1 and the 2026-09-04
-phone capability test): Playwright/Chromium is pre-installed, real outbound
-network reaches npm/PyPI/GitHub, and the Supabase MCP connector works —
-**but is proxied outside this container's own restricted shell egress**,
-the same way memora-growth's MCP connectors are proxied outside ITS shell's
-zero-network local Mac environment. Concretely: **the plain shell cannot
-reach `*.supabase.co` directly** (confirmed by the capability test's own
-failed raw upload attempt) — every Supabase read, write, and file upload
-in this run goes through `execute_sql` (an MCP tool call), never through
-`curl`/`requests`/a raw HTTP client in the shell.
+**A Cowork scheduled task bound to Armaan's Mac** (`requires_local_device:
+true`), working against the repo's one persistent copy on disk at
+`/Users/armaanmahajan/Documents/Projects/Memora/outreach-bot` via the
+device-bridge shell tool -- **not** a fresh `git clone` into an ephemeral
+cloud container. That distinction matters and took two failed designs to
+get to, both confirmed empirically on 2026-09-05:
 
-**First step of every run, before anything else:**
+- A plain (non-device-bound) Cowork scheduled task, running entirely in
+  the cloud container, cannot push to GitHub at all. Normal permission
+  mode blocks the very first `git clone` at the command-classifier layer.
+  `bypassPermissions` ("skip mode") gets past clone and commit, but `git
+  push` is still rejected by a separate, deeper git-egress proxy ("not in
+  this session's authorized repository set") that skip mode has no effect
+  on. There's no self-service way to add a repo to that proxy's allowed
+  set.
+- So **git push is not this run's job at all.** This run only gets as far
+  as `git commit` (Stage 8a). A plain macOS `launchd` job
+  (`com.armaan.memora-outreach-push`, installed from `scripts/`, see
+  `scripts/SETUP-auto-push.md`) runs independently on Armaan's Mac, as his
+  own user, outside any Claude tool entirely, and pushes whatever's
+  pending on a short timer. It isn't subject to either restriction above
+  because it isn't Claude doing the pushing -- proven working 2026-09-05.
+
+**Implication for sequencing:** because push happens on a timer, not
+synchronously inside this run, there's a short, bounded delay between
+Stage 8a's commit and the file actually being live on
+`raw.githubusercontent.com` for Stage 8b to fetch. See Stage 8b below --
+retry on a miss, don't fail on the first one.
+
+**Start every run with:**
 
 ```bash
-git clone https://x-access-token:$GITHUB_PUSH_TOKEN@github.com/Armaan-Mahajan/memora-outreach-bot.git outreach-bot && cd outreach-bot
+cd /Users/armaanmahajan/Documents/Projects/Memora/outreach-bot
+git pull --rebase origin main
 ```
 
-The repo is `Armaan-Mahajan/memora-outreach-bot`, **private**. `$GITHUB_PUSH_TOKEN`
-is the fine-grained PAT (Contents: Read and write, scoped to just this repo)
-this same run needs later for Stage 8's push too -- set once as an
-environment value for the run, never hardcoded. A fresh container has
-nothing on disk otherwise: no templates, no `topics.json`, no `pipeline/`
-scripts.
-
-**UNVERIFIED as of 2026-09-05, capability test pending:** whether a fresh
-scheduled-task container can authenticate git operations against GitHub at
-all. An interactive Cowork session hit a proxy that silently discards any
-credential it's given and only allows repos already on a pre-authorized
-list for that session, with no self-service way to add one -- confirmed by
-direct testing, not assumed (see pipeline-plan.md §7). If a scheduled
-task's container turns out to be gated the same way, this clone step (and
-Stage 8's push) will fail no matter what token they're given, and the
-git-relay upload mechanism needs a different plan for unattended runs. If
-this clone fails with something like "access denied by the git proxy" or
-"not in this session's authorized repository set": **stop and report it
-exactly as-is. Do not try to work around it** (don't unset proxy
-environment variables, don't try alternate hosts/URLs, don't retry with a
-different auth scheme) -- that specific workaround was attempted once,
-during interactive testing, and was blocked by the platform itself before
-it could do anything. Treat a proxy-origin failure here as a hard stop for
-the whole run, not a per-post failure.
+Do this even though nothing here should conflict with a direct edit
+elsewhere -- it's cheap, and skipping it is exactly what caused a real
+non-fast-forward push rejection on 2026-09-05 (a manual README edit made
+straight on GitHub's web UI diverged from the local copy). If the rebase
+itself conflicts, stop and report it -- don't resolve a conflict
+unattended.
 
 Supabase project: `memora-outreach` (id `dtyiuknezuzqohdxicbg`,
 `https://dtyiuknezuzqohdxicbg.supabase.co`). This is the isolated dashboard
-project, not memora-web's — never point anything at memora-web's project.
+project, not memora-web's -- never point anything at memora-web's project.
+Every Supabase read, write, and file upload goes through `execute_sql` (an
+MCP tool call) -- never a raw HTTP client in the shell.
 
 ## Hard rules
 
@@ -185,19 +186,22 @@ pipeline-plan.md's "Getting bytes into Storage from the cloud" for the full
 reasoning, and its §7 for how this was proven end-to-end on 2026-09-05.
 Two steps, per image, in slide order:
 
-**8a. Commit and push the rendered image to `drafts/`:**
+**8a. Commit the rendered image to `drafts/` -- do not push it yourself:**
 
 ```bash
 git add drafts/<format>/<slug>/<NN>.<ext>
 git commit -m "Add <slug> draft"
-git push
 ```
 
-If this fails with a proxy/authorization error, stop the whole run and
-report it (see the note on this in "First step of every run" above) —
-don't fall back to any other upload path for this post.
+That's it -- no `git push` here. The `com.armaan.memora-outreach-push`
+launchd job on Armaan's Mac picks up any pending commit and pushes it
+within `StartInterval` seconds (currently 60s -- check
+`scripts/com.armaan.memora-outreach-push.plist` if this changes). If `git
+commit` itself fails for a reason other than "nothing to commit," stop and
+report it -- that's a real local problem, not something the launchd job
+can fix.
 
-**8b. Build and run the upload SQL:**
+**8b. Build and run the upload SQL -- retry on a miss, don't fail on the first one:**
 
 ```bash
 python3 pipeline/publish.py github-upload-sql \
@@ -215,16 +219,17 @@ This prints `{"repo_path", "source_url", "public_url", "sql"}`. Run the
 select status_code, content, error_msg from net._http_response where id = <request_id>;
 ```
 
-**Confirm `status_code = 200` and `content` contains `"ok":true` for every
-image before continuing.** Do not build the insert on an unconfirmed
-upload — a non-200/non-ok response almost always means the push in 8a
-hasn't landed yet, or the path doesn't match. `$SUPABASE_ANON_KEY` is the
-legacy anon JWT the `upload-asset` Edge Function needs to authenticate the
-invocation — get it via `mcp__Supabase__get_publishable_keys` if it's not
-already in the environment; never hardcode it in a committed file.
+**Confirm `status_code = 200` and `content` contains `"ok":true` before
+continuing.** A non-200 here most likely just means the launchd push
+hasn't run yet, not a real failure -- wait ~15-20 seconds and re-run the
+same `github-upload-sql` + `execute_sql` check (the SQL is idempotent,
+safe to re-run). Retry up to 5 times (~90 seconds total) before treating
+it as a genuine failure and reporting this post as failed rather than
+looping longer -- that budget comfortably covers the 60-second push
+interval plus one retry's slack.
 
 **Never use `pipeline/publish.py upload-sql`** (the base64-inlined variant)
-for a real post — it's kept only for tiny test fixtures and is exactly the
+for a real post -- it's kept only for tiny test fixtures and is exactly the
 slow, expensive, silently-corruptible mechanism this whole design replaced.
 
 Once every image for this post is confirmed uploaded:
