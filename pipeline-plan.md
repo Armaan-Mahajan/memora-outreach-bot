@@ -353,27 +353,9 @@ Steps 0–3 are the session; 4–6 can follow.
   doesn't need the subagent treatment.
 - **Where the pipeline repo lives** — a new dedicated repo, or a folder
   inside an existing one? Needs deciding before build-order step 0, since
-  that step's only job is pushing it somewhere clonable. **Blocked on
-  Armaan, not something Claude can do from here:** this session's device
-  shell has no `gh` CLI, no `brew`, and no git credential helper configured
-  (it's a sandboxed Linux VM inside the desktop app, not a real Mac
-  terminal) — so creating a GitHub repo and doing the first push needs to
-  happen from Armaan's own terminal, where his real credentials live.
-  Suggested, matching the `memora-growth` naming precedent (dedicated repo
-  named after the folder): `gh repo create Armaan-Mahajan/outreach-bot
-  --private --source=. --remote=origin` run from
-  `~/Documents/Projects/Memora/outreach-bot`, then `git add -A && git
-  commit -m "Initial commit" && git push -u origin main`. Once it exists,
-  RUNBOOK.md's `git clone <REPO_URL>` placeholder needs the real URL filled
-  in.
-- ~~Keep or tear down the `pg_net` + `upload-asset` Edge Function test
-  infra~~ — **RESOLVED: keeping it.** `pipeline/publish.py`'s `upload-sql`
-  command is now built directly on this mechanism (it's the only proven
-  path from the cloud sandbox to Storage), so tearing it down would mean
-  redesigning Stage 8 with no replacement in hand. Flag if this turns out
-  to be the wrong call. Loose end: the tiny test object left in
-  `outreach-assets` (`test/capability-check-pgnet-tiny.png`) can't be
-  cleaned up via SQL — the anon key has no delete policy on that bucket
-  (confirmed by trying), and it's not worth standing up another Edge
-  Function just to delete a 68-byte file. Harmless to leave; delete
-  manually from the Supabase dashboard if it bothers you.
+  that step's only job is pushing it somewhere clonable.
+- **Keep or tear down the `pg_net` + `upload-asset` Edge Function test
+  infra** — proven working 2026-09-04 (see Stage 8), but stood up as a
+  capability test, not committed to as production infrastructure yet.
+  Also: whether to delete the test object left in `outreach-assets`
+  (`test/capability-check-pgnet-tiny.png`).

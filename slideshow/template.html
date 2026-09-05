@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="assets/katex.min.css">
+<style>
+  @font-face {
+    font-family: "Geist";
+    font-weight: 100 900;
+    src: url("assets/geist-sans-variable.woff2") format("woff2-variations"),
+         url("assets/geist-sans-variable.woff2") format("woff2");
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    font-family: "Geist", -apple-system, "system-ui", "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+  /* ---- slide shell ---- */
+  .slide {
+    position: relative;
+    width: 1080px;
+    height: 1350px;
+    background: #171717;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 92px;
+  }
+
+  /* cover + closer keep a gradient ground, but subtle — a wash, not a blob */
+  .slide.cover .glow-a,
+  .slide.closer .glow-a {
+    position: absolute;
+    top: -240px; left: -280px;
+    width: 900px; height: 900px;
+    background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(139,92,246,0) 70%);
+  }
+  .slide.cover .glow-b,
+  .slide.closer .glow-b {
+    position: absolute;
+    bottom: -320px; right: -300px;
+    width: 980px; height: 980px;
+    background: radial-gradient(circle, rgba(59,130,246,0.13) 0%, rgba(59,130,246,0) 70%);
+  }
+
+  /* ---- progress bar (mirrors the flashcard viewer's) ---- */
+  .progress-track {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.10);
+    overflow: hidden;
+    flex-shrink: 0;
+    margin-bottom: 72px;
+  }
+  .progress-fill {
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(to right, #8b5cf6, #3b82f6);
+  }
+
+  /* ---- corner logo ---- */
+  .corner-logo {
+    position: absolute;
+    left: 92px;
+    bottom: 84px;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    overflow: hidden;
+    opacity: 0.85;
+  }
+  .corner-logo img { width: 100%; height: 100%; display: block; }
+
+  /* ---- content column ---- */
+  .content {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-bottom: 150px;
+  }
+
+  /* ---- cover ---- */
+  .cover .content,
+  .closer .content { justify-content: flex-end; }
+
+  .cover .eyebrow {
+    color: #c4b5fd;
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 34px;
+  }
+  .cover .title {
+    color: #ffffff;
+    font-size: 100px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+  .cover .sub {
+    margin-top: 42px;
+    color: #a1a1aa;
+    font-size: 46px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  /* ---- body / list ---- */
+  .body .content,
+  .list-slide .content { justify-content: flex-start; }
+  .body-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .heading {
+    color: #ffffff;
+    font-size: 66px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 44px;
+  }
+  .text {
+    color: #d4d4d8;
+    font-size: 52px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+  .text + .math-block { margin-top: 48px; }
+  .math-block + .text { margin-top: 48px; }
+
+  strong {
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .math-block {
+    margin: 12px 0;
+    text-align: center;
+    color: #f4f4f5;
+    font-size: 56px;
+  }
+  .math-block + .math-block { margin-top: 28px; }
+
+  /* ---- list ---- */
+  .list { display: flex; flex-direction: column; gap: 46px; }
+  .list-item {
+    display: flex;
+    gap: 28px;
+    color: #d4d4d8;
+    font-size: 48px;
+    font-weight: 400;
+    line-height: 1.45;
+  }
+  .list-marker {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    margin-top: 26px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  }
+
+  /* ---- closer ---- */
+  .closer .content { align-items: flex-start; }
+  .closer .closer-logo {
+    width: 96px; height: 96px;
+    border-radius: 24px;
+    overflow: hidden;
+    margin-bottom: 46px;
+    box-shadow: 0 12px 34px rgba(139,92,246,0.4);
+  }
+  .closer .closer-logo img { width: 100%; height: 100%; display: block; }
+  .closer .heading { font-size: 78px; margin-bottom: 32px; }
+  .closer .text { font-size: 46px; color: #d4d4d8; }
+  .closer .cta {
+    margin-top: 56px;
+    display: inline-flex;
+    align-items: center;
+    padding: 20px 44px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    color: #ffffff;
+    font-size: 36px;
+    font-weight: 700;
+    box-shadow: 0 12px 30px rgba(99,102,241,0.4);
+  }
+
+  /* katex sizing inside slides */
+  .katex { font-size: 1em; }
+</style>
+</head>
+<body>
+{{SLIDES}}
+
+<script src="assets/katex.min.js"></script>
+<script src="assets/mhchem.min.js"></script>
+<script src="assets/auto-render.min.js"></script>
+<script>
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: "\\[", right: "\\]", display: true },
+      { left: "$", right: "$", display: false }
+    ],
+    throwOnError: true
+  });
+  window.__katexDone = true;
+</script>
+</body>
+</html>
