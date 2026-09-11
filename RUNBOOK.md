@@ -106,7 +106,7 @@ Required for every post, both formats — same requirement as always, just a dif
    curl -sS -H "Authorization: Bearer <token from step 1>" \
         -H "Accept: application/vnd.github.raw" \
         -o preview_<n>.jpg \
-        "https://api.github.com/repos/Armaan-Mahajan/memora-render-previews/contents/preview/<render_requests id>/<n>.jpg"
+        "https://api.github.com/repos/Armaan-Mahajan/memora-outreach-render-previews/contents/preview/<render_requests id>/<n>.jpg"
    ```
    No image bytes pass through a tool call in either direction — they go straight from GitHub to this container's disk over `curl`, the same discipline the old base64-relay stage existed to avoid, just via a different host.
 3. `Read` each `preview_<n>.jpg` in order. There's no single contact-sheet image to lean on anymore now that rendering happens in the Worker — for slideshows, walk every slide individually. Check for orphaned words, cramped/empty composition, whether the cover earns a swipe (slideshows), whether the deck reads as a coherent sequence. Output: pass, or a specific list of fixes.
