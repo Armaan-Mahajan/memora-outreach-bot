@@ -1,0 +1,67 @@
+{
+  "slug": "lechatelier-principle",
+  "format": "slideshow",
+  "archetype": "micro-lesson",
+  "feature": "agent",
+  "topic": "chemistry/equilibrium/le-chateliers-principle",
+  "slides": [
+    {
+      "type": "cover",
+      "eyebrow": "Chemistry · Equilibrium",
+      "title": "Le Chatelier's principle",
+      "sub": "What actually happens when you disturb an equilibrium — in 5 slides."
+    },
+    {
+      "type": "body",
+      "heading": "The idea",
+      "text": "Disturb a system at equilibrium and it shifts to **partly oppose** the change. Partly — never fully. It settles at a new equilibrium, not back at the old one."
+    },
+    {
+      "type": "body",
+      "heading": "The example",
+      "math": [
+        "\\ce{N2(g) + 3H2(g) <=> 2NH3(g)}",
+        "\\Delta H = -92\\ \\mathrm{kJ\\,mol^{-1}}"
+      ],
+      "text": "Four moles of gas become two, and the forward reaction is exothermic. Both of those matter for everything that follows."
+    },
+    {
+      "type": "list",
+      "heading": "Three ways to disturb it",
+      "items": [
+        "**Add $\\ce{N2}$ or $\\ce{H2}$** — shifts right, consuming what you added.",
+        "**Raise the pressure** — shifts right, toward the side with fewer moles of gas.",
+        "**Raise the temperature** — shifts left, away from the exothermic direction."
+      ]
+    },
+    {
+      "type": "body",
+      "heading": "The part that's easy to miss",
+      "math": [
+        "K_c = \\frac{[\\ce{NH3}]^2}{[\\ce{N2}][\\ce{H2}]^3}"
+      ],
+      "text": "Concentration and pressure move the **position** of equilibrium, but $K_c$ stays fixed — the ratio rebalances back to it. **Only temperature changes $K_c$.**"
+    },
+    {
+      "type": "body",
+      "heading": "Why the Haber process is a compromise",
+      "text": "High pressure helps yield, so industry pushes it hard. High temperature **hurts** yield — but a cold reactor is uselessly slow. So it runs hot enough to be fast and accepts the lower yield: roughly $450\\ ^\\circ\\mathrm{C}$ at $200\\ \\mathrm{atm}$."
+    },
+    {
+      "type": "closer",
+      "heading": "One topic, explained.",
+      "text": "Memora Agent turns your entire syllabus into a full interactive course — automatically.",
+      "cta": "Link in bio"
+    }
+  ],
+  "caption": "Le Chatelier's principle without the memorising.\n\nThe bit that's easy to miss: only temperature changes Kc. Concentration and pressure move the position of equilibrium, and the ratio just rebalances back to the same Kc.\n\nSave this one for your equilibrium unit.",
+  "hashtags": [
+    "#chemistry",
+    "#alevelchemistry",
+    "#ibchemistry",
+    "#equilibrium",
+    "#lechatelier",
+    "#chemistrystudent",
+    "#studytips"
+  ]
+}

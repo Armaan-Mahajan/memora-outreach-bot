@@ -1,0 +1,13 @@
+{
+  "slug": "chat-mora-oxphos",
+  "badge_text": "",
+  "eyebrow": "Meet Mora",
+  "headline": "Stuck on something? Just ask.",
+  "subhead": "No flat chat thread — branch into whatever you're stuck on, with math and diagrams rendered right there.",
+  "messages": [
+    { "role": "user", "text": "Can you break down oxidative phosphorylation? I'm lost." },
+    { "role": "mora", "text": "Think of it as a tiny power plant in your cells — glucose is the fuel, and the electron transport chain turns it into usable energy your cells can actually use." }
+  ],
+  "cta_text": "Ask Mora",
+  "footer_note": "Link in bio"
+}

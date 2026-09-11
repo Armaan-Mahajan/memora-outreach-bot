@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: "Geist";
+    font-weight: 100 900;
+    src: url("../../assets/geist-sans-variable.woff2") format("woff2-variations"), url("../../assets/geist-sans-variable.woff2") format("woff2");
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1080px; height: 1350px; background: #171717;
+    font-family: "Geist", -apple-system, "system-ui", "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+    overflow: hidden; position: relative;
+  }
+  .glow-a { position: absolute; top: -180px; left: -220px; width: 700px; height: 700px; background: radial-gradient(circle, rgba(139,92,246,0.30) 0%, rgba(139,92,246,0) 70%); filter: blur(10px); }
+  .glow-b { position: absolute; bottom: -260px; right: -240px; width: 800px; height: 800px; background: radial-gradient(circle, rgba(59,130,246,0.26) 0%, rgba(59,130,246,0) 70%); filter: blur(10px); }
+  .frame { position: relative; width: 1080px; height: 1350px; padding: 72px 76px 64px 76px; display: flex; flex-direction: column; }
+  .header { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 18px; }
+  .brand-icon { width: 60px; height: 60px; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(139,92,246,0.35); }
+  .brand-icon img { width: 100%; height: 100%; display: block; }
+  .brand-name { color: #ffffff; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
+  .badge { display: inline-flex; align-items: center; padding: 10px 22px; border-radius: 999px; background: rgba(139,92,246,0.16); border: 1px solid rgba(167,139,250,0.45); color: #c4b5fd; font-size: 20px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .badge:empty { display: none; }
+  .footer { margin-top: 48px; display: flex; align-items: center; justify-content: space-between; }
+  .cta { display: inline-flex; align-items: center; gap: 12px; padding: 22px 46px; border-radius: 999px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: #ffffff; font-size: 30px; font-weight: 700; box-shadow: 0 12px 30px rgba(99,102,241,0.4); }
+  .cta svg { width: 26px; height: 26px; }
+  .link-in-bio { color: #71717a; font-size: 24px; font-weight: 500; }
+  .hero { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+
+  /* ---- layout-specific: benefits checklist, text-forward hero ---- */
+  .checklist-hero { justify-content: center; }
+  .checklist-hero .eyebrow { margin-top: 0; color: #93c5fd; font-size: 26px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 20px; }
+  .check-headline { color: #ffffff; font-size: 62px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.14; margin-bottom: 44px; }
+  .check-list { display: flex; flex-direction: column; gap: 36px; }
+  .check-item { display: flex; align-items: flex-start; gap: 24px; }
+  .check-mark {
+    flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; margin-top: 4px;
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6); display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 20px rgba(99,102,241,0.35);
+  }
+  .check-mark svg { width: 22px; height: 22px; }
+  .check-text { color: #e4e4e7; font-size: 36px; font-weight: 500; line-height: 1.42; }
+  .check-text strong { color: #ffffff; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="glow-a"></div>
+  <div class="glow-b"></div>
+  <div class="frame">
+
+    <div class="header">
+      <div class="brand">
+        <div class="brand-icon"><img src="../../assets/social-media-logo-inverted.png"></div>
+        <div class="brand-name">Memora</div>
+      </div>
+      <div class="badge">{{BADGE_TEXT}}</div>
+    </div>
+
+    <div class="hero checklist-hero">
+      <div class="eyebrow">{{EYEBROW}}</div>
+      <h1 id="headline" class="check-headline">{{HEADLINE}}</h1>
+      <div class="check-list">
+        {{ITEMS}}
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="cta">
+        {{CTA_TEXT}}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+      <div class="link-in-bio">{{FOOTER_NOTE}}</div>
+    </div>
+
+  </div>
+</body>
+</html>
