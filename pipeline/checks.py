@@ -9,7 +9,7 @@ Two checks, both against history.py's "recent_all" list:
 **Flags, never auto-blocks**: a false positive that silently kills a good post is worse than one that arrives with a note on it. This script's exit code is always 0 on a successful run; the caller (the orchestrator) is expected to read the `flagged` field and route accordingly -- write it into the draft's `notes` column, not reject the post.
 
 Usage:
-    python3 checks.py <candidate_content.json> <shaped_history.json>
+    python3 checks.py <candidate_content.json> <shaped_history.json> [--layout <layout>]
 
 candidate_content.json needs at least "headline" and optionally "caption" (matching the format's content-example.json shape).
 
@@ -27,6 +27,19 @@ import re
 import sys
 
 SIMILARITY_THRESHOLD = 0.6
+
+# flow-outline only ever describes one feature (Agent), so its headline/
+# subhead necessarily converge on the same "turn your syllabus into a
+# course" framing post to post -- a much narrower vocabulary space than a
+# layout that rotates across features/topics. That pushes headline+caption
+# similarity structurally higher here even when the part that actually
+# varies (outline_items) is completely different. A higher bar keeps the
+# backstop from flagging every flow-outline post against the last one -- it
+# doesn't turn the check off, and an exact verbatim repeat (exact_hash_match
+# below) still gets caught at the same bar as everywhere else.
+LAYOUT_SIMILARITY_THRESHOLDS = {
+    "flow-outline": 0.8,
+}
 
 
 def normalize(text: str) -> str:
@@ -50,7 +63,8 @@ def jaccard_similarity(a: str, b: str) -> float:
     return len(intersection) / len(union)
 
 
-def run_checks(candidate: dict, recent_all: list) -> dict:
+def run_checks(candidate: dict, recent_all: list, layout: str | None = None) -> dict:
+    threshold = LAYOUT_SIMILARITY_THRESHOLDS.get(layout, SIMILARITY_THRESHOLD)
     headline = candidate.get("headline", "")
     caption = candidate.get("caption", "")
     candidate_text = f"{headline} {caption}".strip()
@@ -70,7 +84,7 @@ def run_checks(candidate: dict, recent_all: list) -> dict:
 
         past_text = f"{past_headline} {past_caption}".strip()
         score = jaccard_similarity(candidate_text, past_text)
-        if score >= SIMILARITY_THRESHOLD:
+        if score >= threshold:
             similarity_flags.append({"against_headline": past_headline, "score": round(score, 2)})
 
     flagged = exact_hash_match or bool(similarity_flags)
@@ -94,13 +108,23 @@ def run_checks(candidate: dict, recent_all: list) -> dict:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python3 checks.py <candidate_content.json> <shaped_history.json>", file=sys.stderr)
+    args = sys.argv[1:]
+    layout = None
+    if "--layout" in args:
+        i = args.index("--layout")
+        if i + 1 >= len(args):
+            print("Usage: python3 checks.py <candidate_content.json> <shaped_history.json> [--layout <layout>]", file=sys.stderr)
+            sys.exit(1)
+        layout = args[i + 1]
+        del args[i : i + 2]
+
+    if len(args) != 2:
+        print("Usage: python3 checks.py <candidate_content.json> <shaped_history.json> [--layout <layout>]", file=sys.stderr)
         sys.exit(1)
 
-    with open(sys.argv[1]) as f:
+    with open(args[0]) as f:
         candidate = json.load(f)
-    with open(sys.argv[2]) as f:
+    with open(args[1]) as f:
         history = json.load(f)
 
-    print(json.dumps(run_checks(candidate, history.get("recent_all", [])), indent=2))
+    print(json.dumps(run_checks(candidate, history.get("recent_all", []), layout), indent=2))
