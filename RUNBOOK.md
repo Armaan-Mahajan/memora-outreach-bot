@@ -65,6 +65,8 @@ Before writing anything, use the Read tool to look at a rendered example of the 
 
 Given the assignment, the voice docs, `history_shaped.json`'s `recent_by_feature` (or the relevant slice for the topic), and what you just saw rendered, write `content.json` matching the target layout/format's `content-example.json` shape. Don't repeat the angle of anything in the last ~10-15 posts for that feature/topic.
 
+**stat-hero's `stat_unit` has a hard 3-line cap.** Unlike the headline, it has no auto-shrink at render time -- if it comes out past 3 lines the Worker throws and the render fails outright, not a style nit. Keep it well under 40 characters if you can; actual wrapping depends on word shapes as much as raw character count (a few short common words wrap far more forgivingly than one long compound one), so when in doubt, write it shorter than you think you need to.
+
 ### Stage 3 — Verify the claims (Sonnet subagent)
 
 For anything with a factual claim (mainly slideshows, and `flow-outline`'s hardcoded-adjacent copy), spin up a **fresh Agent tool call on Sonnet** (`model: "sonnet"`) — zero memory of Stage 2 — and hand it the content without "this is our content" framing. Ask it to find what's wrong and say what it actually checked, not just return a bare verdict. This is a tool call inside this same run, not a separate scheduled task. Confirmed working 2026-09-04.
@@ -95,23 +97,29 @@ Loop with a short pause between checks (this container has no scheduler of its o
 
 ### Stage 5 — Look at it (you, Claude, vision)
 
-Required for every post, both formats — same requirement as always, just a different route to the actual pixels. The rendered image only exists in Supabase Storage now (there's no local file on this container's own disk to `Read`), and this container's egress proxy blocks `*.supabase.co` and `*.workers.dev` outright (confirmed 2026-09-11 — see "Where you are" above), so neither Storage's public URL nor the Worker itself is directly reachable from here. `memora-render-worker` also pushes a copy of each rendered image to a small private GitHub repo for exactly this reason (see that repo's `src/index.js`, `pushPreview`) — `api.github.com` is the one arbitrary host this container's proxy actually lets through, and its Contents API can hand back raw bytes directly.
+Required for every post, both formats — same requirement as always, just a different route to the actual pixels. The rendered image only exists in Supabase Storage now (there's no local file on this container's own disk to `Read`), and this container's egress proxy blocks `*.supabase.co` and `*.workers.dev` outright (confirmed 2026-09-11 — see "Where you are" above), so neither Storage's public URL nor the Worker itself is directly reachable from here. `memora-render-worker` also pushes a copy of each rendered image to a small private GitHub repo for exactly this reason (see that repo's `src/index.js`, `pushPreview`).
 
-1. Get the preview token — used only as a header value in step 2, never written into this run's own output:
+Fetch that copy over git, not the REST Contents API — `api.github.com`'s Contents/tarball endpoints are gated by a session-level repo allowlist this container can't satisfy (confirmed 2026-09-12: same 403 regardless of whether the target repo is public or private), but plain git-over-HTTPS against `github.com` is not. A partial, sparse clone keeps this fast and bounded even as the previews repo accumulates every image it's ever received:
+
+1. Get the preview token — used only as a header value in step 2, never written into this run's own output or into any git config on disk:
    ```sql
    select decrypted_secret from vault.decrypted_secrets where name = 'github_preview_token';
    ```
-2. For each image (`1` for a single-image card, `1..slide_count` for a slideshow), pull it straight to local disk:
+2. Once per render (not once per image): fetch just this render's own folder, nothing else in the repo's history —
    ```bash
-   curl -sS -H "Authorization: Bearer <token from step 1>" \
-        -H "Accept: application/vnd.github.raw" \
-        -o preview_<n>.jpg \
-        "https://api.github.com/repos/Armaan-Mahajan/memora-outreach-render-previews/contents/preview/<render_requests id>/<n>.jpg"
+   rm -rf preview_fetch && mkdir preview_fetch && cd preview_fetch
+   git -c http.extraHeader="Authorization: Bearer <token from step 1>" \
+       clone --no-checkout --depth 1 --filter=blob:none \
+       https://github.com/Armaan-Mahajan/memora-outreach-render-previews.git .
+   git sparse-checkout set --no-cone "preview/<render_requests id>"
+   git checkout
+   cd ..
    ```
-   No image bytes pass through a tool call in either direction — they go straight from GitHub to this container's disk over `curl`, the same discipline the old base64-relay stage existed to avoid, just via a different host.
-3. `Read` each `preview_<n>.jpg` in order. There's no single contact-sheet image to lean on anymore now that rendering happens in the Worker — for slideshows, walk every slide individually. Check for orphaned words, cramped/empty composition, whether the cover earns a swipe (slideshows), whether the deck reads as a coherent sequence. Output: pass, or a specific list of fixes.
+   `-c http.extraHeader=...` is scoped to that one command — it's never written into `.git/config`, so the token doesn't sit on disk once the clone finishes. `--filter=blob:none` plus the sparse-checkout means only this render's own images are ever downloaded, not the whole repo's accumulated history.
+3. `Read` each `preview_fetch/preview/<render_requests id>/<n>.jpg` in order (`1` for a single-image card, `1..slide_count` for a slideshow). There's no single contact-sheet image to lean on anymore now that rendering happens in the Worker — for slideshows, walk every slide individually. Check for orphaned words, cramped/empty composition, whether the cover earns a swipe (slideshows), whether the deck reads as a coherent sequence. Output: pass, or a specific list of fixes.
+4. `rm -rf preview_fetch` once you're done looking — don't let clones pile up across posts in the same run.
 
-If the `curl` itself fails — an expired token, or `pushPreview` silently not landing a copy (it's deliberately best-effort on the Worker's side, so a GitHub hiccup there never fails an otherwise-good render) — that's still a Stage 5 failure: don't ship a post you couldn't actually look at. Report it and let Stage 6 or the stop-and-report path handle it.
+If the clone itself fails — an expired token, an auth error, or `pushPreview` silently not landing a copy (it's deliberately best-effort on the Worker's side, so a GitHub hiccup there never fails an otherwise-good render) — that's still a Stage 5 failure: don't ship a post you couldn't actually look at. Report it and let Stage 6 or the stop-and-report path handle it.
 
 ### Stage 6 — Repair loop
 
@@ -120,8 +128,10 @@ If Stage 4 or 5 failed, edit `content.json` and re-run 4-5. **Cap at 3 attempts.
 ### Stage 7 — Duplicate backstop (deterministic)
 
 ```bash
-python3 pipeline/checks.py content.json history_shaped.json
+python3 pipeline/checks.py content.json history_shaped.json [--layout <layout>]
 ```
+
+Pass `--layout` for single_image posts (the same value Stage 4's `render_requests` row uses; omit for slideshows). `flow-outline` gets a higher similarity bar (0.8 vs. the default 0.6) -- it only ever describes one feature (Agent), so its headline/subhead necessarily converge on similar phrasing post to post even when the outline_items are completely different. Every other layout keeps the default 0.6.
 
 **Flags, never blocks.** If `flagged` is true, carry its `note` into Stage 8's `notes` column rather than discarding the post.
 
