@@ -108,14 +108,16 @@ Fetch that copy over git, not the REST Contents API — `api.github.com`'s Conte
 2. Once per render (not once per image): fetch just this render's own folder, nothing else in the repo's history —
    ```bash
    rm -rf preview_fetch && mkdir preview_fetch && cd preview_fetch
-   git -c http.extraHeader="Authorization: Bearer <token from step 1>" \
+   AUTH=$(printf 'x-access-token:%s' '<token from step 1>' | base64 | tr -d '\n')
+   git -c http.extraHeader="Authorization: Basic ${AUTH}" \
        clone --no-checkout --depth 1 --filter=blob:none \
        https://github.com/Armaan-Mahajan/memora-outreach-render-previews.git .
    git sparse-checkout set --no-cone "preview/<render_requests id>"
    git checkout
    cd ..
+   unset AUTH
    ```
-   `-c http.extraHeader=...` is scoped to that one command — it's never written into `.git/config`, so the token doesn't sit on disk once the clone finishes. `--filter=blob:none` plus the sparse-checkout means only this render's own images are ever downloaded, not the whole repo's accumulated history.
+   Use **Basic** auth, not Bearer -- GitHub's git-over-HTTPS smart protocol wants a PAT as an HTTP Basic password (username can be any non-empty string; `x-access-token` is the GitHub-documented convention). A raw `Authorization: Bearer <token>` header gets a 401 (confirmed 2026-09-12, first live run) -- go straight to Basic, don't rediscover this by trial and error each time. `-c http.extraHeader=...` is scoped to that one command -- it's never written into `.git/config`, and `unset AUTH` clears the encoded credential from the shell's environment once the clone finishes. `--filter=blob:none` plus the sparse-checkout means only this render's own images are ever downloaded, not the whole repo's accumulated history.
 3. `Read` each `preview_fetch/preview/<render_requests id>/<n>.jpg` in order (`1` for a single-image card, `1..slide_count` for a slideshow). There's no single contact-sheet image to lean on anymore now that rendering happens in the Worker — for slideshows, walk every slide individually. Check for orphaned words, cramped/empty composition, whether the cover earns a swipe (slideshows), whether the deck reads as a coherent sequence. Output: pass, or a specific list of fixes.
 4. `rm -rf preview_fetch` once you're done looking — don't let clones pile up across posts in the same run.
 
