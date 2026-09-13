@@ -224,6 +224,22 @@ def cmd_chunk_upload(args):
     print(json.dumps(manifest, indent=2))
 
 
+def cmd_render_request_sql(args):
+    with open(args.content) as f:
+        content = json.load(f)
+
+    columns = {
+        "kind": sql_string(args.kind),
+        "layout": sql_string(args.layout),
+        "content": sql_jsonb(content),
+    }
+    col_names = ", ".join(columns.keys())
+    col_values = ", ".join(columns.values())
+    sql = f"insert into render_requests ({col_names})\nvalues ({col_values})\nreturning id;"
+
+    print(json.dumps({"sql": sql}, indent=2))
+
+
 def cmd_insert_sql(args):
     with open(args.content) as f:
         content = json.load(f)
@@ -277,6 +293,12 @@ def main():
     up.add_argument("--index", type=int, default=1, help="slide number, 1-based (single_image is always 1)")
     up.add_argument("--image", required=True, help="path to the rendered JPEG")
     up.set_defaults(func=cmd_upload_sql)
+
+    rr = sub.add_parser("render-request-sql", help="build the render_requests INSERT SQL for Stage 4 -- content.json embedded safely as jsonb via the same sql_jsonb() used below, so nothing hand-rolls SQL")
+    rr.add_argument("--kind", required=True, choices=["single_image", "slideshow"])
+    rr.add_argument("--layout", help="single-image layout name; omit for slideshows")
+    rr.add_argument("--content", required=True, help="path to content.json")
+    rr.set_defaults(func=cmd_render_request_sql)
 
     ins = sub.add_parser("insert-sql", help="build the outreach_drafts INSERT SQL")
     ins.add_argument("--format", required=True, choices=["single_image", "slideshow", "reel"])

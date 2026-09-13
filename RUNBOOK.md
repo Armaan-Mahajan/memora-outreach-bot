@@ -87,13 +87,13 @@ Anything below confident goes into a `notes` string, carried through to Stage 8.
 
 ### Stage 4 — Render and upload (queued)
 
-Rendering runs entirely inside `memora-render-worker` now, not in this container — insert one row per post and let its trigger hand the work off:
+Rendering runs entirely inside `memora-render-worker` now, not in this container — insert one row per post and let its trigger hand the work off. Build the SQL the same way Stage 8 does, via `pipeline/publish.py` -- never hand-assemble this insert's jsonb literal yourself. A caption or headline with an apostrophe (`you're`, `isn't`) or a quote breaks a hand-written single-quoted string in exactly the way `sql_string()`/`sql_jsonb()` already handle correctly, and there's no reason to re-solve that problem inline for every post:
 
-```sql
-insert into render_requests (kind, layout, content)
-values ('<single_image|slideshow>', '<layout, single_image only, else null>', '<content.json as jsonb>')
-returning id;
+```bash
+python3 pipeline/publish.py render-request-sql --kind <single_image|slideshow> --layout <layout, single_image only, else omit> --content content.json
 ```
+
+Prints `{"sql": "insert into render_requests (...) returning id;"}`. Run that SQL via `execute_sql`.
 
 The insert fires a Database trigger that calls the Worker over `pg_net`, async — Postgres doesn't wait for its HTTP response, so this row's own `status` column is the real source of truth, not the trigger firing. The Worker renders, uploads the finished JPEG(s) straight to Supabase Storage, and writes the result back onto this same row itself: `status`, `public_urls`, and `sizes` (each image's byte count, index-matched to `public_urls` — needed by Stage 8). This absorbs what used to be two separate stages — a local render, then a whole chunked-upload stage through a subagent — into one queued operation, because the Worker does both atomically and uploads with its own credentials.
 
