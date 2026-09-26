@@ -6,7 +6,7 @@ Two format shapes, each with its own rotation axis:
 
   single_image -- archetype is always "feature-highlight". Rotates through Memora's four core features (agent, flashcards, quizzes, mora), never repeating the immediately previous one, then assigns a layout: the feature's natural layout if it has one (agent->flow-outline, flashcards->flashcard-mockup, mora->chat-mockup), otherwise one of the four generic layouts (stat-hero, quote-callout, comparison, checklist), rotating so the same generic layout doesn't repeat back-to-back.
 
-  slideshow -- pulls from topics.json. Never repeats a topic that appears anywhere in history (topics.json is a curated allowlist, not an infinite well, so once it's exhausted this falls back to least-recently-used rather than erroring). Spreads across the two archetypes topics.json actually carries (micro-lesson, technique) by picking from whichever archetype is currently under-represented in history.
+  slideshow -- pulls from topics.json. Never repeats a topic until every topic in the list has been used once, judged against history's all-time `topic_usage` (Stage 0's second query), not just the 20-row window. Weights the two archetypes topics.json carries toward micro-lessons (ARCHETYPE_WEIGHTS, 3:1 -- micro-lessons are the lead format, technique tips are supporting volume) by picking whichever is furthest below its share of recent history, then round-robins across subjects within that archetype -- the subject whose last use is oldest goes next (never-used subjects first, ties alphabetical), and within it the alphabetically-first unused topic. So consecutive micro-lessons never share a subject while another one still has topics left. Once the whole list is exhausted it recycles in true least-recently-used order rather than erroring.
 
 KNOWN GAP, not yet wired in: "agent-output" is a fourth archetype in the decided vocabulary (micro-lesson | technique | agent-output | feature-highlight) -- a slideshow built from a real generated course's actual data rather than a topics.json entry. It needs live course-generation output as its input, not a rotation pick, so it doesn't fit this script's job and isn't implemented here. Roadmap item, not an oversight.
 
@@ -34,6 +34,9 @@ NATURAL_LAYOUT = {
 GENERIC_LAYOUTS = ["stat-hero", "quote-callout", "comparison", "checklist"]
 
 SLIDESHOW_ARCHETYPES = ["micro-lesson", "technique"]
+
+# Target share of slideshows per archetype: 3 micro-lessons for every technique tip (Armaan's call, 2026-09-26). Micro-lessons are the lead format -- they teach real curriculum content, which demonstrates the product's quality by existing; technique decks are safe but generic, since every study account posts them.
+ARCHETYPE_WEIGHTS = {"micro-lesson": 3, "technique": 1}
 
 
 def load_json(path):
@@ -71,28 +74,46 @@ def assign_single_image(history):
 
 
 def assign_slideshow(history, topics_doc):
-    used_topics = set(history.get("used_topics", []))
+    all_topics = topics_doc["topics"]
+    subject_of = {t["slug"]: t["subject"] for t in all_topics}
     archetype_counts = history.get("archetype_counts", {})
 
-    all_topics = topics_doc["topics"]
-    unused = [t for t in all_topics if t["slug"] not in used_topics]
-    pool = unused if unused else all_topics
-    exhausted = not unused
+    # When each topic was last used. topic_usage (Stage 0's all-time query, via history.py --topic-usage) is the real record. used_topics only covers the 20-row window -- kept as a fallback for history files made without --topic-usage, where recency is unknown ("" for everything).
+    usage = history.get("topic_usage")
+    if usage is not None:
+        last_used = {u["topic"]: (u.get("last_used") or "") for u in usage if u.get("topic")}
+    else:
+        last_used = {slug: "" for slug in history.get("used_topics", [])}
 
-    # Spread across archetype: prefer whichever of the two slideshow archetypes has been used less often so far (ties broken by the fixed order in SLIDESHOW_ARCHETYPES, so the outcome never depends on dict ordering).
+    # Most recent use of each subject, for the round-robin below. Timestamps come from one query, so they compare correctly as strings.
+    subject_last_used = {}
+    for slug, ts in last_used.items():
+        subject = subject_of.get(slug)
+        if subject is not None and ts > subject_last_used.get(subject, ""):
+            subject_last_used[subject] = ts
+
+    unused = [t for t in all_topics if t["slug"] not in last_used]
+    exhausted = not unused
+    pool = unused if unused else all_topics
+
+    # Weighted spread across archetype: prefer whichever archetype is furthest below its target share (recent count divided by its weight), ties broken by the fixed order in SLIDESHOW_ARCHETYPES so the outcome never depends on dict ordering. With 3:1 weights this settles into micro, micro, micro, technique.
     def archetype_sort_key(archetype):
-        return (archetype_counts.get(archetype, 0), SLIDESHOW_ARCHETYPES.index(archetype))
+        return (archetype_counts.get(archetype, 0) / ARCHETYPE_WEIGHTS[archetype], SLIDESHOW_ARCHETYPES.index(archetype))
 
     preferred_order = sorted(SLIDESHOW_ARCHETYPES, key=archetype_sort_key)
 
     chosen = None
     for archetype in preferred_order:
         candidates = [t for t in pool if t.get("archetype") == archetype]
-        if candidates:
-            # Deterministic pick within the candidate set: lowest slug alphabetically. (If the pool is the exhausted fallback, this doesn't track true least-recently-used order, since history only carries topic slugs, not per-slug last-used timestamps -- acceptable for a fallback path that should rarely trigger given topics.json's size relative to realistic batch volume.)
-            chosen = sorted(candidates, key=lambda t: t["slug"])[0]
-            chosen_archetype = archetype
-            break
+        if not candidates:
+            continue
+        # Subject round-robin: the subject whose most recent use is oldest (never-used first, ties alphabetical).
+        subject = min({t["subject"] for t in candidates}, key=lambda s: (subject_last_used.get(s, ""), s))
+        in_subject = [t for t in candidates if t["subject"] == subject]
+        # Within it: fresh pool -> every last_used is "", so this is simply the lowest slug; exhausted pool -> the least recently used topic.
+        chosen = min(in_subject, key=lambda t: (last_used.get(t["slug"], ""), t["slug"]))
+        chosen_archetype = archetype
+        break
 
     if chosen is None:
         raise RuntimeError("topics.json has no entries matching any known archetype")

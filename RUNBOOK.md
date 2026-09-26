@@ -38,18 +38,24 @@ Run once per post in the batch (`--count` from the invocation; batch size/cadenc
 ### Stage 0 — Load inputs
 
 - `topics.json` (the allowlist).
-- Recent history:
+- Recent history, plus every slideshow topic ever used -- two queries:
   ```sql
   select id, format, feature, topic, archetype, layout, headline, caption, status, created_at
   from outreach_drafts
   order by created_at desc
   limit 20;
   ```
-  Save the result as `history_raw.json`, then:
-  ```bash
-  python3 pipeline/history.py history_raw.json > history_shaped.json
+  ```sql
+  select topic, max(created_at) as last_used
+  from outreach_drafts
+  where topic is not null
+  group by topic;
   ```
-  Re-run this reload before assigning each subsequent post in the batch, not just once at the start — otherwise post 2 can't see post 1's freshly-queued row and the duplicate-avoidance in Stage 1 loses its teeth partway through a multi-post batch.
+  Save the first result as `history_raw.json` and the second as `topic_usage.json` (each as the plain JSON array of row objects), then:
+  ```bash
+  python3 pipeline/history.py history_raw.json --topic-usage topic_usage.json > history_shaped.json
+  ```
+  Don't skip the second query. The 20-row window only remembers the last handful of slideshows, so without `--topic-usage` Stage 1 starts re-picking topics after about eight decks no matter how long `topics.json` is. Re-run both queries and this reload before assigning each subsequent post in the batch, not just once at the start — otherwise post 2 can't see post 1's freshly-queued row and the duplicate-avoidance in Stage 1 loses its teeth partway through a multi-post batch.
 - `claude-knowledge/brand-voice.md`, `claude-knowledge/memora-overview.md`, and `claude-knowledge/outreach-bot-brief.md` for voice and product facts.
 
 ### Stage 1 — Plan the batch (deterministic)

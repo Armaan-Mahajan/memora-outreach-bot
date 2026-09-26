@@ -12,6 +12,7 @@ Usage:
     python3 run.py --format single_image --count 3 --topics ../topics.json
 """
 import argparse
+import copy
 import json
 import os
 import sys
@@ -26,14 +27,18 @@ EMPTY_HISTORY = {
     "archetype_counts": {},
     "recent_by_feature": {},
     "recent_all": [],
+    "topic_usage": [],
 }
 
 
 def simulate(fmt, count, history, topics_doc):
-    history = dict(history)  # local mutable copy; don't touch the caller's
+    history = copy.deepcopy(history)  # local mutable copy; don't touch the caller's (a shallow dict() copy shared its lists)
+    if "topic_usage" not in history:
+        # Older shaped-history file made without --topic-usage: seed from the 20-row window, recency unknown.
+        history["topic_usage"] = [{"topic": t, "last_used": ""} for t in history.get("used_topics", [])]
     results = []
 
-    for _ in range(count):
+    for i in range(count):
         if fmt == "single_image":
             pick = assign_single_image(history)
             history["last_feature"] = pick["feature"]
@@ -43,6 +48,9 @@ def simulate(fmt, count, history, topics_doc):
             history.setdefault("used_topics", [])
             if pick["topic"] not in history["used_topics"]:
                 history["used_topics"].append(pick["topic"])
+            # Mirror Stage 0's all-time topic_usage query. Simulated timestamps start with '~', which sorts after any real created_at, so each pick counts as the newest use.
+            usage = [u for u in history["topic_usage"] if u["topic"] != pick["topic"]]
+            history["topic_usage"] = [{"topic": pick["topic"], "last_used": f"~sim-{i:06d}"}] + usage
             counts = dict(history.get("archetype_counts", {}))
             counts[pick["archetype"]] = counts.get(pick["archetype"], 0) + 1
             history["archetype_counts"] = counts

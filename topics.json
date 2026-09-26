@@ -7,7 +7,10 @@
       "Nothing that needs a diagram to teach -- slideshows explicitly carry no diagrams or graphs (a wrong diagram is confidently wrong and slips past review because it looks like a diagram).",
       "No live policy/political framing -- economics and psychology entries stick to mechanism and definition, not current-events application.",
       "safe_for 'all' means genuinely curriculum-agnostic (a physical law, a mathematical identity, a definitional concept taught the same way everywhere); anything narrower says which boards it's been checked against.",
-      "archetype is 'micro-lesson' for curriculum content, 'technique' for study-skills content that isn't tied to any subject."
+      "archetype is 'micro-lesson' for curriculum content, 'technique' for study-skills content that isn't tied to any subject.",
+      "Nothing sensitive for a 13-18 audience: no reproduction or sexual-health content, drugs, gambling or betting framing, mental-health diagnoses, or anything that reads as personal medical or health advice. Biology and psychology entries stay at the level of mechanism.",
+      "Psychology and learning-science entries rely only on findings that have held up under replication. Don't build a deck on the Stanford prison experiment, ego depletion, power posing, the laptop-vs-longhand note-taking study, or a precise '7 plus or minus 2' memory span -- and 'learning styles' appears only as a myth-busting deck.",
+      "No near-duplicates: every entry should produce a deck that couldn't be mistaken for another entry's. Related entries are fine (their notes say how they differ) as long as the core lesson is different."
     ]
   },
   "topics": [
@@ -36,6 +39,158 @@
       "notes": "Electron-transfer framing (OIL RIG) is universal. Stick to identifying oxidation/reduction, not balancing complex half-equations, which varies by board depth."
     },
     {
+      "subject": "Chemistry",
+      "topic": "Breaking bonds takes energy -- it doesn't release it",
+      "slug": "bond-breaking-endothermic",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Top-tier misconception, universal: breaking bonds is always endothermic and making them exothermic; the overall sign depends on the balance. Stay qualitative -- bond-enthalpy data varies between boards' data booklets."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "What a catalyst does (and doesn't) change",
+      "slug": "what-catalysts-change",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: a catalyst provides a pathway with lower activation energy and speeds up forward and reverse reactions alike, so it changes neither the equilibrium position nor the enthalpy change. The Maxwell-Boltzmann explanation is a graph -- leave it out."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Collision theory: what actually speeds up a reaction",
+      "slug": "collision-theory-rates",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: rate depends on how often particles collide with at least the activation energy. Cover concentration, temperature, and surface area in words. Leave catalysts to their own deck so the two don't overlap."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Dynamic equilibrium doesn't mean equal amounts",
+      "slug": "dynamic-equilibrium-not-equal",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Common misconception, universal: at equilibrium the forward and reverse RATES are equal, not the concentrations. Different from the existing Le Chatelier deck (that's about shifts; this is about what equilibrium is)."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Boiling water doesn't break any water molecules",
+      "slug": "boiling-intermolecular-forces",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: boiling overcomes the forces between molecules, not the covalent bonds inside them -- steam is still water molecules. Names for intermolecular forces vary by board (London/dispersion, van der Waals, induced dipole-dipole), so say 'intermolecular forces' and don't commit to one scheme."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Why ice floats",
+      "slug": "why-ice-floats",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Hydrogen bonding holds ice in an open arrangement, so solid water is less dense than liquid -- unusual among substances, and universal. Bonus fact: liquid water is densest around 4 °C. Describe the structure in words; no lattice diagram."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "The mole is just a (very big) counting number",
+      "slug": "mole-as-counting-unit",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: like 'a dozen', a mole is a fixed count (about 6.022 x 10^23). Since the 2019 SI redefinition that number is exact by definition. The payoff is counting particles by weighing them."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Limiting reagents, explained with sandwiches",
+      "slug": "limiting-reagent",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal; the recipe/sandwich analogy is standard and accurate. One short mole-ratio example in math blocks is fine -- avoid long stoichiometry calculations."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Why salt conducts when dissolved but not as a solid",
+      "slug": "ionic-conductivity",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: ions have to be free to move. Covers ionic structure without a lattice diagram. Stay on ionic compounds only -- whether bonding is taught as an ionic/covalent spectrum varies by board."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Metallic bonding: why metals conduct",
+      "slug": "metallic-bonding",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "The positive-ions-in-a-sea-of-delocalised-electrons model is taught everywhere at this level. Cover conductivity and malleability in words; no structure diagram."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Isotopes: same element, different mass",
+      "slug": "isotopes",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional and universal (same number of protons, different neutrons, same chemical behaviour). Carbon-12 vs. carbon-14 is the clean example; relative atomic mass as a weighted average is a fine extension."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "pH is logarithmic: pH 3 is ten times more acidic than pH 4",
+      "slug": "ph-logarithmic-scale",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: each pH unit is a factor of 10 in hydrogen-ion concentration. Different from the existing strong-vs-weak-acids deck. Avoid pH values of specific products (they vary); pure water at pH 7 (at 25 °C) is safe."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Why atoms get smaller across a period",
+      "slug": "atomic-radius-across-period",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Periodic trend, universal: more protons pulling on electrons in the same shell. The hook is the paradox -- more particles, smaller atom. Explainable without the periodic table graphic."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Why noble gases (almost) never react",
+      "slug": "noble-gases-unreactive",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Full outer shells, universal. Say 'very unreactive', not 'never react' -- xenon compounds exist, and that nuance makes a good final slide."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Diamond vs. graphite: same atoms, different properties",
+      "slug": "diamond-vs-graphite",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Allotropes of carbon, universal. Explain hardness and conductivity from bonding in words (four bonds each vs. three plus delocalised electrons between layers). No structure diagrams."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Empirical vs. molecular formula",
+      "slug": "empirical-vs-molecular-formula",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional and universal (simplest whole-number ratio vs. actual atom counts). Glucose is the canonical example (CH2O vs. C6H12O6) -- typeset formulas with mhchem."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Where does the mass go when wood burns?",
+      "slug": "conservation-of-mass-burning",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Conservation of mass, universal: the 'missing' mass leaves as gases (carbon dioxide and water vapour); in a closed system the total is unchanged. Keep combustion equations simple and balanced."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Like dissolves like: why oil and water don't mix",
+      "slug": "like-dissolves-like",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Polarity-based solubility, universal at this level. Keep it qualitative (polar with polar, non-polar with non-polar); skip the thermodynamics of dissolving."
+    },
+    {
+      "subject": "Chemistry",
+      "topic": "Structural isomers: same formula, different molecule",
+      "slug": "structural-isomers",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional and universal (IUPAC naming is international). Butane vs. methylpropane is the clean example -- describe the chains in words or condensed formulas; skeletal and displayed formulas are diagrams, so leave them out."
+    },
+    {
       "subject": "Biology",
       "topic": "Cellular respiration and the electron transport chain",
       "slug": "cellular-respiration-etc",
@@ -60,6 +215,134 @@
       "notes": "Classic intro-biology distinction, definitional, no diagram required to explain correctly."
     },
     {
+      "subject": "Biology",
+      "topic": "Dominant doesn't mean common",
+      "slug": "dominant-not-common",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Classic genetics misconception, universal: dominance is about how two alleles interact in one organism, not how frequent an allele is in a population. Use Mendel's peas or a hypothetical trait -- avoid human disease or appearance examples that could feel personal."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Genes, alleles, genotype, phenotype: the vocabulary untangled",
+      "slug": "gene-allele-genotype-phenotype",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional and universal. Mendel's pea plants (flower colour) make a neutral running example taught everywhere. Leave Punnett squares out -- the definitions don't need them."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Mitosis vs. meiosis: what each one is for",
+      "slug": "mitosis-vs-meiosis",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Purpose-level comparison (genetically identical cells for growth and repair vs. genetically varied gametes with half the chromosomes) is universal. Don't walk through phases -- stage detail varies by board and depends on diagrams. Keep reproduction strictly at the cell level."
+    },
+    {
+      "subject": "Biology",
+      "topic": "From DNA to protein in two steps",
+      "slug": "dna-to-protein",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Transcription and translation (DNA to mRNA to protein) at the depth every board teaches. Avoid deeper molecular detail (splicing, named enzymes) that some syllabi include and others don't."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Why cells are so small: surface area to volume",
+      "slug": "surface-area-to-volume",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: volume grows faster than surface area, so a big cell can't exchange materials fast enough. The 1 cm vs. 2 cm cube calculation fits in math blocks -- numbers, not a diagram."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Prokaryotes vs. eukaryotes",
+      "slug": "prokaryotes-vs-eukaryotes",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional and universal (no nucleus or membrane-bound organelles vs. both present). Don't imply prokaryotic DNA is unorganised -- it sits in a nucleoid, often with plasmids. Endosymbiosis gets a mention at most."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Arteries vs. veins: it's direction, not oxygen",
+      "slug": "arteries-vs-veins",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal definition: arteries carry blood away from the heart, veins towards it. The pulmonary artery (carrying deoxygenated blood) is the famous exception to the 'arteries carry oxygen-rich blood' rule of thumb -- that's the hook. Words only, no heart diagram."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Enzymes don't die -- they denature",
+      "slug": "enzyme-denaturation",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: heat or the wrong pH changes the active site's shape so the substrate no longer fits. Don't pick between lock-and-key and induced-fit (boards teach them at different depths) -- just describe the shape change. Enzymes aren't alive, which is the hook."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Why plants are green",
+      "slug": "why-plants-are-green",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: chlorophyll absorbs mostly red and blue light and reflects green. Hook: plants reject the colour they're famous for. No absorption-spectrum graph."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Where a tree's mass actually comes from",
+      "slug": "tree-mass-from-air",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Mostly from carbon dioxide in the air, via photosynthesis -- not from the soil. Universal and strongly counterintuitive. Van Helmont's willow experiment is the historical angle (he concluded water, which was only part of the story). Keep the photosynthesis equation simple, typeset with mhchem."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Why antibiotics don't work on viruses",
+      "slug": "antibiotics-vs-viruses",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: antibiotics target structures and processes bacteria have and viruses don't. Strictly educational -- no medical advice, no 'what to take when you're ill', no fear framing about resistance."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Homeostasis: how your body holds its temperature steady",
+      "slug": "homeostasis-negative-feedback",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Negative feedback, universal. Temperature control (sweating, shivering, changes in skin blood flow) is the standard example. Avoid blood-glucose/diabetes framing, which edges into health conditions."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Nerves vs. hormones: two ways your body sends messages",
+      "slug": "nervous-vs-hormonal",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal comparison (fast, short-lived, targeted vs. slower, longer-lasting, widespread). Adrenaline is a safe hormone example; keep reproductive hormones out entirely."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Why food chains are short",
+      "slug": "energy-loss-trophic-levels",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: energy is lost at each step (movement, heat, waste). The '10%' figure is a rough rule of thumb that varies a lot between ecosystems -- present it as approximate. Describe the chain in words, no pyramid diagram."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Mutations aren't always harmful",
+      "slug": "mutations-not-always-harmful",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: most mutations are neutral, some harmful, a few beneficial -- and they're the raw material of variation. Use non-human examples (antibiotic resistance as a benefit to the bacterium); avoid human genetic disease."
+    },
+    {
+      "subject": "Biology",
+      "topic": "Immune memory: why the second infection is milder",
+      "slug": "immune-memory-secondary-response",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Memory cells and the faster, larger secondary response are universal textbook content. Naming vaccination as the application is fine, but mechanism only -- no vaccine policy, safety debates, or health advice."
+    },
+    {
       "subject": "Physics",
       "topic": "Newton's third law, correctly stated",
       "slug": "newtons-third-law",
@@ -82,6 +365,254 @@
       "archetype": "micro-lesson",
       "safe_for": "all",
       "notes": "Core mechanics, universal across boards. Stick to the principle and elastic-vs-inelastic definitions, not diagram-dependent vector problems."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Mass vs. weight",
+      "slug": "mass-vs-weight",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: mass (kg) is the amount of matter; weight is a force (N), W = mg. The hook: your mass is the same on the Moon, your weight isn't. Use g = 9.8 N/kg and note some courses round to 10."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Newton's first law: things don't need a force to keep moving",
+      "slug": "newtons-first-law",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Targets the deep-rooted 'motion needs a push' misconception; universal. Explain why everyday objects slow down (friction and air resistance are forces). Different law and misconception from the existing Newton's-third-law deck."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Why heavy and light objects fall at the same rate",
+      "slug": "free-fall-mass-independence",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: with negligible air resistance, everything falls with the same acceleration; air resistance explains the everyday exceptions. The Galileo leaning-tower story is historically doubtful -- use Apollo 15's hammer-and-feather drop on the Moon (1971), which actually happened."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Holding a heavy box does zero work on it",
+      "slug": "work-physics-definition",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Physics 'work' (force x distance moved in the direction of the force) vs. everyday effort -- universal, counterintuitive hook. Be precise: your muscles still use energy internally; it's no work done ON THE BOX."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Energy isn't used up, it's transferred",
+      "slug": "energy-transferred-not-used",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Conservation of energy, universal. Vocabulary differs by board ('energy stores and pathways' vs. 'forms of energy'), so describe transfers plainly without committing to either framework's labels."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Double the speed, four times the braking distance",
+      "slug": "kinetic-energy-v-squared",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "KE = 1/2 mv^2 is universal; with the same braking force, braking distance scales with v^2 because the brakes must remove four times the energy. Keep it to the physics -- no road-safety lecture, no country-specific stopping-distance tables."
+    },
+    {
+      "subject": "Physics",
+      "topic": "How airbags work: stretching out the stopping time",
+      "slug": "impulse-airbags",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "F = change in momentum / time, universal: the same momentum change over a longer time means a smaller force. Different lesson from the existing conservation-of-momentum deck (force and time, not collisions). Mechanism only -- no crash statistics."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Heat vs. temperature",
+      "slug": "heat-vs-temperature",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal distinction (temperature relates to the average kinetic energy of particles; heat is energy transferred because of a temperature difference). A bath vs. a cup of boiling water is the classic contrast. Keep definitions at the level every board shares."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Why metal feels colder than wood at the same temperature",
+      "slug": "metal-feels-colder",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Thermal conductivity, universal, excellent hook: both are at room temperature, but metal conducts heat away from your hand faster. No diagram needed."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Latent heat: why melting ice stays at 0 °C",
+      "slug": "latent-heat-constant-temperature",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: during a change of state, energy goes into overcoming forces between particles rather than raising the temperature. Stay qualitative; specific-latent-heat symbols vary by board."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Pressure: why a sharp knife cuts and snowshoes don't sink",
+      "slug": "pressure-force-over-area",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "P = F / A, universal. Two everyday examples pulling in opposite directions carry the whole lesson."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Why a steel ship floats",
+      "slug": "buoyancy-steel-ship",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Archimedes' principle and average density, universal. A solid steel block sinks; a hollow hull displaces enough water to support its weight. Salinity/temperature effects on water density get a passing mention at most."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Transverse vs. longitudinal waves",
+      "slug": "transverse-vs-longitudinal-waves",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional and universal (oscillation perpendicular vs. parallel to the direction of energy transfer). Use light or waves on a string as transverse examples and sound as longitudinal. Avoid water waves as the transverse example -- some courses simplify them that way, but they aren't strictly transverse."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Why there's no sound in space",
+      "slug": "sound-needs-a-medium",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Sound is a mechanical wave that needs particles; light doesn't. Universal. Sci-fi explosions are the hook -- keep it light and don't dunk on a specific film."
+    },
+    {
+      "subject": "Physics",
+      "topic": "The Doppler effect",
+      "slug": "doppler-effect",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: waves bunch up ahead of a moving source (higher pitch) and stretch out behind it (lower pitch). A passing siren is the canonical example. Stay qualitative -- the equations differ in form and depth across boards."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Half-life: random for one atom, predictable for billions",
+      "slug": "half-life-random-predictable",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal. Individual decays are random; a large sample halves in a fixed time. Coin or dice analogies work. No health or radiation-dose claims."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Alpha, beta, gamma: what stops each one",
+      "slug": "alpha-beta-gamma-penetration",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Standard facts: alpha is stopped by paper or skin, beta by a few mm of aluminium, gamma is reduced by thick lead or concrete -- plus the inverse link to ionising ability. Factual tone, no fear framing or safety advice."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Nuclear fission vs. fusion",
+      "slug": "fission-vs-fusion",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional and universal (splitting heavy nuclei vs. joining light ones; the Sun runs on fusion). Mechanism only -- no nuclear-power policy or weapons framing."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Moments: why door handles are far from the hinge",
+      "slug": "moments-door-handles",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Moment = force x perpendicular distance from the pivot, universal. A door handle and a spanner carry it without a diagram. Courses differ on 'moment' vs. 'torque' -- name both."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Why Earth has seasons (it's not distance from the Sun)",
+      "slug": "seasons-axial-tilt",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Classic misconception; the universal answer is axial tilt (the angle of sunlight and day length). The killer fact: Earth is closest to the Sun in early January, during northern-hemisphere winter. Explainable without a diagram."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Why the sky is blue",
+      "slug": "why-the-sky-is-blue",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Rayleigh scattering (shorter wavelengths scatter more) is settled physics, even though not every syllabus covers it. Also explains red sunsets (a longer path through air). If 'why not violet?' comes up, keep the answer brief (the Sun's spectrum plus how our eyes respond). Mention the 'it reflects the ocean' myth only to debunk it."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Current isn't used up in a circuit",
+      "slug": "current-not-used-up",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal misconception-correction: current is the same all the way round a single loop; energy is what gets transferred to components. One simple loop described in words -- anything needing a circuit diagram is out."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Centripetal force isn't a new kind of force",
+      "slug": "centripetal-force",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: 'centripetal' names a direction (towards the centre), and an existing force does the job (tension, gravity, friction). Also covers why constant-speed circular motion is still acceleration. On 'centrifugal force', say only that it isn't a real outward force acting on the object -- don't get into reference frames."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Power vs. energy: what an electricity bill actually charges for",
+      "slug": "power-vs-energy",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: power is the rate of energy transfer; the kilowatt-hour is a unit of energy. Keep the bill framing generic -- no real tariffs, prices, or country-specific figures."
+    },
+    {
+      "subject": "Physics",
+      "topic": "Friction: the force that lets you walk",
+      "slug": "friction-lets-you-walk",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Counterintuitive and universal: static friction pushes you forward when your foot pushes back on the ground. Links to Newton's third law but is its own lesson. Keep static vs. kinetic friction qualitative."
+    },
+    {
+      "subject": "Science skills",
+      "topic": "Independent, dependent, and control variables",
+      "slug": "experimental-variables",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal across every science course. One invented experiment (how water temperature affects how long sugar takes to dissolve) labels all three. Boards say 'control variable' or 'controlled variable' -- use both once."
+    },
+    {
+      "subject": "Science skills",
+      "topic": "Accuracy vs. precision",
+      "slug": "accuracy-vs-precision",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal measurement distinction. The dartboard analogy is usually a picture -- describe it in words. Stick to the shared core definitions; finer measurement vocabulary varies by board."
+    },
+    {
+      "subject": "Science skills",
+      "topic": "Random vs. systematic error",
+      "slug": "random-vs-systematic-error",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: repeating measurements reduces the effect of random error but does nothing for systematic error (e.g. a balance that isn't zeroed). Connects to the accuracy-vs-precision deck but shouldn't restate it."
+    },
+    {
+      "subject": "Science skills",
+      "topic": "Significant figures: why 2.0 isn't the same as 2",
+      "slug": "significant-figures",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal idea: trailing zeros communicate how precisely something was measured. Edge-case rules vary slightly between boards -- stick to the core rules and the why."
+    },
+    {
+      "subject": "Science skills",
+      "topic": "Reliability vs. validity",
+      "slug": "reliability-vs-validity",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal across science and psychology research methods (consistent results vs. actually measuring what you meant to). A bathroom scale that's always 2 kg off is reliable but not valid. Related terms ('repeatable', 'reproducible') vary by board -- note the overlap."
+    },
+    {
+      "subject": "Science skills",
+      "topic": "Clever Hans: why good experiments are double-blind",
+      "slug": "clever-hans-double-blind",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "The well-documented story of a horse that seemed to do arithmetic but was reading unconscious cues from its questioners -- a great hook for experimenter bias and double-blind design. Different from the placebo-effect deck (that one is participants' expectations; this one is researchers')."
     },
     {
       "subject": "Math",
@@ -116,6 +647,334 @@
       "notes": "Universal, ancient, undisputed. Describable algebraically without a triangle diagram."
     },
     {
+      "subject": "Math",
+      "topic": "Why a negative times a negative is positive",
+      "slug": "negative-times-negative",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Pure arithmetic identity, universal. Explain it through the pattern in a descending times-table (3 x -2, 2 x -2, 1 x -2, ...) or the distributive law -- not a 'two wrongs make a right' mnemonic, which explains nothing."
+    },
+    {
+      "subject": "Math",
+      "topic": "Why anything to the power of zero is 1",
+      "slug": "power-of-zero",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Follows directly from the index law a^m / a^n = a^(m-n) with m = n. Universal. 0^0 is genuinely convention-dependent -- mention it only to say it's excluded, don't try to settle it."
+    },
+    {
+      "subject": "Math",
+      "topic": "What a logarithm is actually asking",
+      "slug": "what-a-logarithm-asks",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Frame log_b(x) as 'what power of b gives x?' -- the inverse of exponentiation. Universal. Stick to the definition and a couple of clean examples; notation conventions differ (log vs. lg vs. ln), so define whichever one the deck uses."
+    },
+    {
+      "subject": "Math",
+      "topic": "Why 0.999... equals exactly 1",
+      "slug": "point-nine-recurring-equals-one",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Settled fact that reliably surprises people -- strong hook. The 1/3 = 0.333... argument and the 'no number fits between them' argument both work. Present it as exact equality, never as 'close enough' or rounding."
+    },
+    {
+      "subject": "Math",
+      "topic": "Permutations vs. combinations: when order matters",
+      "slug": "permutations-vs-combinations",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal counting principle. One everyday example of each (a race podium vs. choosing a team) carries it. nPr/nCr notation varies across boards and calculators -- describe the idea and use factorial formulas rather than leaning on one notation."
+    },
+    {
+      "subject": "Math",
+      "topic": "The birthday problem: why 23 people is enough",
+      "slug": "birthday-problem",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Classic, undisputed probability result (just over a 50% chance that two of 23 people share a birthday). State the assumptions (365 equally likely days, ignore leap years). The real lesson is the complement trick -- work out the chance that nobody shares."
+    },
+    {
+      "subject": "Math",
+      "topic": "False positives and the base-rate trap",
+      "slug": "base-rate-false-positives",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Conditional probability with a strong hook: a '99% accurate' test for something rare still produces mostly false positives. Use a clearly hypothetical scenario with round numbers -- never a real disease, real test, or anything that reads as medical advice."
+    },
+    {
+      "subject": "Math",
+      "topic": "The gambler's fallacy: coins don't 'owe' you heads",
+      "slug": "gamblers-fallacy",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Independent events, universal. Coins and dice only -- no casino, betting, or lottery framing for an under-18 audience. Different lesson from the regression-to-the-mean deck."
+    },
+    {
+      "subject": "Math",
+      "topic": "The Monty Hall problem",
+      "slug": "monty-hall-problem",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Settled answer (switching wins 2/3 of the time) under the standard rules: the host knows where the prize is, always opens a losing door, and always offers the switch. State those rules explicitly -- the puzzle's famous 'controversy' comes from leaving them unstated. Neutral framing (doors and a prize), no gambling angle."
+    },
+    {
+      "subject": "Math",
+      "topic": "Mean vs. median: when the average misleads",
+      "slug": "mean-vs-median",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal statistics. Show skew with a small invented data set (one very large value among ordinary ones). Avoid real income or wealth statistics, which pull toward live economic/political framing."
+    },
+    {
+      "subject": "Math",
+      "topic": "Percentage change vs. percentage points",
+      "slug": "percentage-change-vs-points",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal and constantly misused. Neutral invented numbers (a club's attendance rate going from 20% to 30%: +10 percentage points, but +50% relative). Avoid real polling, election, or policy figures."
+    },
+    {
+      "subject": "Math",
+      "topic": "Why √2 is irrational (proof by contradiction)",
+      "slug": "root-two-irrational",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Classic proof, identical everywhere it's taught, and a clean first look at proof by contradiction. Walk the standard even/even argument in short math-block steps -- it suits the slide format because each step is small."
+    },
+    {
+      "subject": "Math",
+      "topic": "Proof by induction: the domino idea",
+      "slug": "proof-by-induction",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Taught the same way wherever it appears, though it isn't in every syllabus (that's depth, not disagreement). Keep it to the logic -- base case plus inductive step -- with one short sum-of-integers example; don't imply every student will be examined on it."
+    },
+    {
+      "subject": "Math",
+      "topic": "Exponential vs. linear growth: why doubling wins",
+      "slug": "exponential-vs-linear-growth",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal. Neutral examples only (rice on a chessboard; the thickness of a sheet folded in half repeatedly). Avoid pandemic or population examples, which drift into live-policy territory."
+    },
+    {
+      "subject": "Math",
+      "topic": "Where the quadratic formula comes from",
+      "slug": "quadratic-formula-derivation",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Pure algebra, universal: derive it by completing the square on ax^2 + bx + c = 0. The payoff is never having to memorise it blind again. Keep each slide to one or two algebra steps so nothing overflows."
+    },
+    {
+      "subject": "Math",
+      "topic": "The chain rule, as rates multiplying",
+      "slug": "chain-rule-intuition",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Conceptual framing (if y changes 3 times as fast as u, and u changes 2 times as fast as x, then y changes 6 times as fast as x) is universal. Show dy/dx = (dy/du)(du/dx) once; no pile of worked differentiation. Assumes the reader knows what a derivative is -- the existing derivative-rate-of-change deck covers that."
+    },
+    {
+      "subject": "Math",
+      "topic": "The fundamental theorem of calculus, in plain words",
+      "slug": "fundamental-theorem-of-calculus",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Differentiation and integration as inverse processes -- universal wherever calculus is taught. Keep it verbal and algebraic (accumulated change vs. rate of change). Naming 'area under a curve' is fine, but don't lean on a graph the deck can't show."
+    },
+    {
+      "subject": "Math",
+      "topic": "Why e^x is its own derivative",
+      "slug": "e-to-the-x-derivative",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal. Frame e as the base whose growth rate equals its current value; the continuous-compounding limit is a fine way in, framed as maths rather than money advice. No rigorous limit proof -- why it matters is the lesson."
+    },
+    {
+      "subject": "Math",
+      "topic": "Radians: measuring angles by arc length",
+      "slug": "why-radians",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "The definition (one radian gives an arc as long as the radius; 2π radians in a full turn) is universal and explainable without drawing the circle. Payoff: calculus results like d/dx sin x = cos x only hold in radians."
+    },
+    {
+      "subject": "Math",
+      "topic": "Why you can't just divide both sides by x",
+      "slug": "dividing-by-x-loses-solutions",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Common algebra slip: x^2 = x 'becomes' x = 1, silently losing x = 0. Universal, strong 'you've probably done this' hook. Related to the existing division-by-zero deck but a different lesson (losing solutions, not undefined values)."
+    },
+    {
+      "subject": "Math",
+      "topic": "What standard deviation actually tells you",
+      "slug": "standard-deviation-meaning",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "The idea (roughly, the typical distance from the mean) is universal. Population vs. sample formulas (n vs. n - 1) get different emphasis across boards -- explain the concept and don't commit to one formula."
+    },
+    {
+      "subject": "Math",
+      "topic": "Simpson's paradox: when combining data flips the result",
+      "slug": "simpsons-paradox",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Settled statistics with a great hook. Use a neutral invented example (two players' success rates across two conditions). Avoid the well-known university-admissions case -- it drags in gender framing the deck doesn't need."
+    },
+    {
+      "subject": "Math",
+      "topic": "Survivorship bias",
+      "slug": "survivorship-bias",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal reasoning error. The WWII returning-aircraft story (Abraham Wald) is the classic -- tell it in words, since its usual illustration is a diagram. Avoid 'famous dropouts who succeeded' examples, which read as life advice."
+    },
+    {
+      "subject": "Math",
+      "topic": "Regression to the mean",
+      "slug": "regression-to-the-mean",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Settled statistics. Test-score or sports examples work (an unusually great performance tends to be followed by a more ordinary one). Make clear it isn't 'the universe balancing out' -- that's the gambler's fallacy deck's territory."
+    },
+    {
+      "subject": "Math",
+      "topic": "Arithmetic vs. geometric sequences",
+      "slug": "arithmetic-vs-geometric-sequences",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Adding a constant vs. multiplying by one -- universal. Keep to recognising each type and its general term; notation (u_n vs. a_n) varies by board, so pick one and define it."
+    },
+    {
+      "subject": "Math",
+      "topic": "What the imaginary number i actually is",
+      "slug": "imaginary-number-i",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional (i^2 = -1) and universal wherever complex numbers are taught; not every syllabus reaches it, which is depth rather than disagreement. Stay algebraic -- the Argand diagram is a diagram, so leave it out."
+    },
+    {
+      "subject": "Math",
+      "topic": "Order of operations is a convention, not a law of nature",
+      "slug": "order-of-operations-convention",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "BODMAS, BIDMAS, and PEMDAS encode the same rules -- name all three so no one's board feels 'wrong'. Stay well away from viral '6 / 2(1+2)'-style puzzles: implied multiplication genuinely has no universal convention, which is exactly the contested territory this list excludes."
+    },
+    {
+      "subject": "Math",
+      "topic": "Why a bigger sample can't fix a biased one",
+      "slug": "sampling-bias-sample-size",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal statistics: bias is about who gets sampled, not how many. Use a neutral invented survey (asking only people in a library how much students read). Prefer that over famous election-poll examples."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Why computers count in binary",
+      "slug": "why-binary",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: two stable states map cleanly onto electronics. A couple of conversions (1011 = 11) fit in math blocks. The slide format has no code blocks -- never include code."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Why 0.1 + 0.2 isn't exactly 0.3 in most programming languages",
+      "slug": "floating-point-precision",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Settled fact about binary floating point: 0.1 has no exact binary representation, just as 1/3 has none in decimal. Great hook. Say 'most languages' rather than naming one; no code."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Linear vs. binary search",
+      "slug": "linear-vs-binary-search",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal algorithms content. The dictionary analogy carries it; the payoff is that binary search needs sorted data. Steps in words or a short list -- no pseudocode, whose conventions differ by board."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Big O, without the maths anxiety",
+      "slug": "big-o-intuition",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "The idea (how the work grows as the input grows) is universal; formal Big O appears at different depths across courses. Keep to O(1), O(n), and O(n^2) with everyday analogies."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Recursion: why every recursive function needs a base case",
+      "slug": "recursion-base-case",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal concept. A countdown or factorial described in words; the missing base case (infinite recursion) is the hook. No code or board-specific pseudocode."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Compiled vs. interpreted languages",
+      "slug": "compiled-vs-interpreted",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal definitions (translate everything first vs. translate and run as you go). Keep it conceptual; many real languages use hybrid approaches, so avoid firmly classifying specific ones."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Bits vs. bytes: why your download speed looks 8x smaller",
+      "slug": "bits-vs-bytes",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: 8 bits per byte; connection speeds are quoted in megabits, file sizes in megabytes. Give the 1000 vs. 1024 (kB vs. KiB) question one line at most -- conventions genuinely differ between courses."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Stacks vs. queues",
+      "slug": "stacks-vs-queues",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal data structures (last in, first out vs. first in, first out). Everyday analogies (a stack of plates; a lunch queue) and one real use each (undo history; a print queue). No code."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Hashing vs. encryption",
+      "slug": "hashing-vs-encryption",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal and commonly confused: encryption is reversible with a key; hashing is one-way. Why passwords are stored as hashes is the payoff. Conceptual only -- no tools and no attack techniques."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Lossy vs. lossless compression",
+      "slug": "lossy-vs-lossless-compression",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal. Everyday examples (photos and music vs. zip files and text). Conceptual; run-length encoding is fine as a simple lossless illustration."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "RAM vs. storage",
+      "slug": "ram-vs-storage",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal (volatile working memory vs. persistent storage). The desk-vs-filing-cabinet analogy works. No current product specs or prices."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "Syntax, runtime, and logic errors",
+      "slug": "types-of-programming-errors",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal categories, though boards group runtime errors slightly differently -- keep the three-way split light. Examples in words, no code."
+    },
+    {
+      "subject": "Computer Science",
+      "topic": "AND, OR, NOT, XOR in plain English",
+      "slug": "boolean-logic",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal Boolean logic. Truth tables fit as short lists; logic-gate symbols are diagrams, so leave them out. Operator notation varies by board -- use the words."
+    },
+    {
       "subject": "Economics",
       "topic": "Opportunity cost, with a non-money example",
       "slug": "opportunity-cost",
@@ -138,6 +997,142 @@
       "archetype": "micro-lesson",
       "safe_for": "all",
       "notes": "Definitional and universal; stick to the concept and a couple of intuitive examples (necessities vs. luxuries), not board-specific formula notation."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Positive vs. normative statements",
+      "slug": "positive-vs-normative",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal and foundational (testable claims vs. value judgements). Use deliberately neutral examples (cinema ticket prices, the school canteen queue) -- never real political statements, which is exactly the trap this deck teaches readers to spot."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Ceteris paribus: holding everything else equal",
+      "slug": "ceteris-paribus",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: why economic models change one variable at a time. An everyday prediction that fails once 'everything else' stops holding still makes the point. No diagrams."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Diminishing marginal utility vs. diminishing returns",
+      "slug": "diminishing-utility-vs-returns",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Two commonly confused concepts, both universal: one is about consumers (each extra slice of pizza satisfies less), the other about short-run production (each extra worker on fixed equipment adds less output). The distinction itself is the lesson."
+    },
+    {
+      "subject": "Economics",
+      "topic": "The sunk cost fallacy",
+      "slug": "sunk-cost-fallacy",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: money or time already spent and unrecoverable shouldn't drive future decisions. Related to the existing opportunity-cost deck but a different idea. Everyday examples (finishing a boring film because you paid for the ticket) -- no investing or business framing."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Comparative vs. absolute advantage",
+      "slug": "comparative-vs-absolute-advantage",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal core concept. Use two people splitting tasks (two students dividing a group project) rather than countries and trade policy, which drifts into live political territory. Invented round numbers only."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Normal vs. inferior goods",
+      "slug": "normal-vs-inferior-goods",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal (demand rises vs. falls as income rises). 'Inferior' is a technical term, not a judgement -- say so, and pick examples that couldn't read as looking down on anyone's spending."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Complements vs. substitutes",
+      "slug": "complements-vs-substitutes",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal cross-price relationships. Neutral product pairs (games consoles and games; tea and coffee). Stay conceptual -- cross-elasticity notation varies."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Fixed vs. variable costs",
+      "slug": "fixed-vs-variable-costs",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal. A small invented business (a lemonade stand, a bakery) carries it. Keep to definitions and why the distinction matters in the short run."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Economies of scale: why bigger can be cheaper per unit",
+      "slug": "economies-of-scale",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal concept. Name a couple of types (bulk buying, specialisation) rather than a full taxonomy -- boards list different sets. Mention diseconomies briefly as the limit. No real companies."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Externalities: costs and benefits that land on someone else",
+      "slug": "externalities",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal. Small-scale neutral examples (a neighbour's loud music; a neighbour's beautiful garden). Avoid pollution and carbon-tax framing, which pulls straight into live policy debate."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Public goods: why nobody sells streetlights",
+      "slug": "public-goods",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Non-rival and non-excludable, universal. Streetlights and lighthouses are the classic examples. Mechanism only -- no argument for or against any government providing anything."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Nominal vs. real: why a 'raise' can leave you worse off",
+      "slug": "nominal-vs-real",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal (adjusting for inflation). Invented round numbers only -- never real recent inflation rates, which date instantly and carry political charge. Frame the 'raise' as pocket money or a part-time wage to fit the audience."
+    },
+    {
+      "subject": "Economics",
+      "topic": "The jobs money does",
+      "slug": "functions-of-money",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Medium of exchange, unit of account, store of value -- taught everywhere; some courses add standard of deferred payment as a fourth, so mention that. Avoid cryptocurrency debates."
+    },
+    {
+      "subject": "Economics",
+      "topic": "What GDP measures -- and what it leaves out",
+      "slug": "what-gdp-measures",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: the value of final goods and services produced; it excludes unpaid work, leisure, and much of the informal economy. Factual limitations only -- no country rankings or 'whose economy is doing better' comparisons."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Frictional, structural, and cyclical unemployment",
+      "slug": "types-of-unemployment",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Definitional and universal; some boards add seasonal, which is fine to mention. Generic examples (someone between jobs; a skill that's no longer needed) -- no current unemployment figures or policy prescriptions."
+    },
+    {
+      "subject": "Economics",
+      "topic": "Why a monopoly can't just charge any price it likes",
+      "slug": "monopoly-price-limit",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal: even a single seller faces demand that falls as price rises, so higher prices mean fewer buyers. Stay verbal -- the profit-maximisation diagram is out. No real companies named."
+    },
+    {
+      "subject": "Economics",
+      "topic": "The prisoner's dilemma",
+      "slug": "prisoners-dilemma",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Standard game theory, taught in oligopoly units across boards at varying depth. Describe the payoffs as a short list rather than a grid. The classic two-suspects story is fine as a story; two firms choosing prices works too."
     },
     {
       "subject": "Psychology",
@@ -164,12 +1159,276 @@
       "notes": "Universal cognitive-bias concept. Explicitly use an everyday example (e.g. sports fandom, shopping decisions) rather than a political or social one to stay inside the no-live-controversy rule."
     },
     {
+      "subject": "Psychology",
+      "topic": "Anchoring: why the first number sticks",
+      "slug": "anchoring-bias",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Robust and widely replicated (Tversky & Kahneman; reproduced in the Many Labs project). Neutral example: estimates pulled towards an unrelated number seen first. Avoid 'how shops manipulate you' framing aimed at teens."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "The availability heuristic",
+      "slug": "availability-heuristic",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Well-established (Tversky & Kahneman, 1973): judging how likely something is by how easily examples come to mind. The original letter-K study is a neutral example. Avoid news, crime, or terrorism framing."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "The fundamental attribution error",
+      "slug": "fundamental-attribution-error",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Standard social psychology (Jones & Harris, 1967): over-explaining other people's behaviour by personality rather than situation. Example: assuming a classmate who snapped at you is just rude. Don't frame it as the self-vs-others 'actor-observer' contrast -- that asymmetry has weak meta-analytic support. Note the effect is weaker in some cultures."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "Cognitive dissonance",
+      "slug": "cognitive-dissonance",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Classic (Festinger & Carlsmith, 1959) and on every psychology course: the discomfort of conflicting beliefs or actions, and how people resolve it. Present the phenomenon; don't claim it's the only explanation (self-perception theory is the known alternative)."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "The serial position effect: why you remember the start and the end",
+      "slug": "serial-position-effect",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Robust memory finding (primacy and recency). Classic detail: a short delay before recall wipes out the recency effect. Bridge to study habits (the middle of a long list or session is the weak spot) without overclaiming."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "Memory is a reconstruction, not a recording",
+      "slug": "reconstructive-memory",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Well-established (Bartlett, 1932; Loftus & Palmer, 1974 -- 'smashed' vs. 'hit'). Any quoted speed estimates from Loftus & Palmer must be verified in Stage 3; otherwise describe the effect without numbers. Keep eyewitness discussion general, no real criminal cases."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "Chunking: why phone numbers come in groups",
+      "slug": "chunking-memory",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "The chunking concept is well-established. Do NOT present '7 plus or minus 2' as settled short-term memory capacity -- Miller's figure is disputed (Cowan argues nearer 4 chunks). Say capacity is limited and chunking stretches it."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "Sensory adaptation: why you stop noticing a smell",
+      "slug": "sensory-adaptation",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal perception fact: constant, unchanging stimuli get tuned out. Everyday examples (a watch on your wrist, a fridge's hum). Light and neutral."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "The mere exposure effect",
+      "slug": "mere-exposure-effect",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Well-established (Zajonc, 1968; robust in later meta-analysis): liking things more simply from repeated exposure. Relatable hook: songs you disliked at first. Don't frame it as an advertising tactic aimed at teens."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "The placebo effect, and why experiments need control groups",
+      "slug": "placebo-effect",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Established and universal in research-methods teaching: participants' expectations change reported outcomes, so trials need placebo controls. Don't overclaim ('placebos cure illness') and give no health advice. Different from the Clever Hans deck (researchers' expectations)."
+    },
+    {
+      "subject": "Psychology",
+      "topic": "Conformity: Asch's line experiment",
+      "slug": "asch-conformity",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "On every psychology course. Describe the line-comparison task in words. Any figures (commonly: about three-quarters of participants conformed at least once; roughly a third of critical-trial answers overall) must be verified in Stage 3. Note that later replications found rates vary across cultures and eras."
+    },
+    {
       "subject": "English / Literature",
       "topic": "Denotation vs. connotation",
       "slug": "denotation-vs-connotation",
       "archetype": "micro-lesson",
       "safe_for": "all",
       "notes": "Universal literary-analysis vocabulary distinction, no text-specific interpretation required, so no curriculum-specific reading-list dependency."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Tone vs. mood",
+      "slug": "tone-vs-mood",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal distinction (the writer's attitude vs. the reader's feeling). Invented short example sentences rather than set texts, so no reading list is assumed."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Dramatic, situational, and verbal irony",
+      "slug": "three-types-of-irony",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal definitions. Invented examples, or very widely known ones (the ending of Romeo and Juliet for dramatic irony). Skip the 'is rain on your wedding day ironic?' debate -- contested and distracting."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "A theme is a sentence, not a word",
+      "slug": "theme-vs-topic",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal analysis skill: 'love' is a topic; 'love makes people act against their own interests' is a theme. Invented examples; no set text needed."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "The unreliable narrator",
+      "slug": "unreliable-narrator",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal concept. Use a long-established, widely taught example (Poe's 'The Tell-Tale Heart') or an invented one. Avoid texts with mature content given the audience."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "First person, third-person limited, and omniscient",
+      "slug": "narrative-point-of-view",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal definitions. Rewriting one invented sentence three ways is the whole deck; second person can be a bonus mention."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Ethos, pathos, logos",
+      "slug": "ethos-pathos-logos",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal rhetoric vocabulary. Neutral persuasive examples (a school club poster, a product review) -- never political speeches or campaign material."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Active vs. passive voice (and when passive is right)",
+      "slug": "active-vs-passive-voice",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal grammar. The nuance is the hook: passive is the right call when the actor is unknown or irrelevant (lab reports). Don't present 'never use passive' as a rule."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "The 'so what?' test: from spotting techniques to analysing them",
+      "slug": "so-what-analysis",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal essay skill: naming a device earns little; explaining its effect is where analysis starts. Board-neutral -- don't quote any board's mark scheme or assessment objectives."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Iambic pentameter, heard not memorised",
+      "slug": "iambic-pentameter",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal definition (five iambs: da-DUM x 5). Use a widely known Shakespeare line. Mark stress with capitals rather than board-specific scansion symbols."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Petrarchan vs. Shakespearean sonnets",
+      "slug": "petrarchan-vs-shakespearean-sonnet",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal form definitions (octave and sestet with a volta vs. three quatrains and a couplet). Rhyme schemes written as letters (ABBAABBA; ABAB CDCD EFEF GG) are text, not diagrams."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "How to use a semicolon",
+      "slug": "semicolon-usage",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Two uses UK and US style agree on: joining closely related independent clauses, and separating list items that already contain commas. Stay away from contested style points like the Oxford comma."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Affect vs. effect",
+      "slug": "affect-vs-effect",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal usage rule (affect is usually the verb, effect usually the noun), with the exceptions noted briefly (to effect change; affect as a psychology noun). A light, high-save deck."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Foreshadowing: planting what pays off later",
+      "slug": "foreshadowing",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal device; Chekhov's gun is the related principle. Invented short passages or long-established classics only -- no spoilers for recent books or films."
+    },
+    {
+      "subject": "English / Literature",
+      "topic": "Juxtaposition and oxymoron",
+      "slug": "juxtaposition-oxymoron",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal and often confused: an oxymoron is juxtaposition compressed into a single phrase ('deafening silence'). Invented or proverbial examples only."
+    },
+    {
+      "subject": "History",
+      "topic": "Primary vs. secondary sources (and why 'primary' doesn't mean 'reliable')",
+      "slug": "primary-vs-secondary-sources",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal history skill; provenance (who made it, when, and why) is the real test. Neutral, uncontested examples (a medieval chronicle vs. a modern textbook) -- nothing tied to live political or national disputes."
+    },
+    {
+      "subject": "History",
+      "topic": "Long-term causes vs. short-term triggers",
+      "slug": "causes-vs-triggers",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal causation skill. The assassination of Franz Ferdinand as the trigger of WWI, set against longer-term causes, is standard across curricula. Keep it to that structure and don't rank the causes -- historians genuinely debate their weight."
+    },
+    {
+      "subject": "History",
+      "topic": "Why there's no year zero",
+      "slug": "no-year-zero",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Factual and universal: the count goes from 1 BC straight to AD 1 (BCE/CE use the same numbering -- name both neutrally). Fun hook: whether the millennium began in 2000 or 2001."
+    },
+    {
+      "subject": "History",
+      "topic": "Why historians disagree about the same events",
+      "slug": "historiography-interpretations",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal skill: different sources, questions, and perspectives produce different interpretations. Keep it abstract or use a long-settled, non-political example -- never a live historical-political dispute."
+    },
+    {
+      "subject": "French",
+      "topic": "Tu vs. vous",
+      "slug": "french-tu-vs-vous",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Universal French usage (informal singular vs. formal or plural). Core rule plus a few everyday situations; regional nuances get one line at most."
+    },
+    {
+      "subject": "French",
+      "topic": "Passé composé vs. imparfait",
+      "slug": "french-passe-compose-vs-imparfait",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Standard distinction taught across French courses (completed actions vs. ongoing, background, or habitual ones). Short invented example pairs; skip rare exceptions."
+    },
+    {
+      "subject": "French",
+      "topic": "French false friends (faux amis)",
+      "slug": "french-faux-amis",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Fun and universal: 'librairie' is a bookshop, 'actuellement' means currently, 'sensible' means sensitive, 'raisin' means grape. Stage 3 must verify every pair used. Leave out any false friend with an embarrassing or adult meaning."
+    },
+    {
+      "subject": "Spanish",
+      "topic": "Ser vs. estar",
+      "slug": "spanish-ser-vs-estar",
+      "archetype": "micro-lesson",
+      "safe_for": "all",
+      "notes": "Core Spanish distinction, taught everywhere. 'Permanent vs. temporary' is a known oversimplification (estar muerto is the classic counterexample) -- teach it as a starting point and show the well-known exceptions."
     },
     {
       "subject": "Study skills",
@@ -186,6 +1445,142 @@
       "archetype": "technique",
       "safe_for": "all",
       "notes": "Well-established learning-science distinction, universal, directly relevant to Flashcards/Quizzes without being a direct product pitch."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Interleaving: mix up your practice problems",
+      "slug": "interleaving-practice",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Well-supported (Rohrer & Taylor and follow-up studies), especially for maths problem types. The hook: it feels messier and harder, which is the point -- you learn to choose the right method, not just run it. Don't quote effect sizes."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Ask 'why?' until it's obvious (elaborative interrogation)",
+      "slug": "elaborative-interrogation",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Rated moderate utility in Dunlosky et al. (2013) -- present it as useful, not a silver bullet. Different from active recall: this connects facts to reasons rather than retrieving them."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Teach it to learn it",
+      "slug": "learning-by-teaching",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Explaining material to someone else (even an imaginary student) exposes gaps -- supported by research on learning by teaching. Don't attach a celebrity name or origin story to the technique unless it's accurate."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Concrete examples: making abstract ideas stick",
+      "slug": "concrete-examples",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "One of the six evidence-based strategies the Learning Scientists summarise. The tip that makes it work: use several varied examples and pin down what they share -- a single example can mislead."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Dual coding: pair words with visuals",
+      "slug": "dual-coding",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Reasonably supported (Paivio's dual coding theory; one of the Learning Scientists' six strategies). Keep claims modest. The deck can't show visuals, so describe what to sketch (timelines, flow charts). Explicitly not 'learning styles' -- that has its own myth-busting deck."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Try before you're taught (the pretesting effect)",
+      "slug": "pretesting-effect",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Attempting questions before learning the material improves later learning even when the attempts are wrong (Richland, Kornell & Kao, 2009, and later work). Practical version: try the end-of-chapter questions first."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Keep a mistake log",
+      "slug": "mistake-log",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Grounded in the hypercorrection effect (confidently wrong answers, once corrected, are remembered especially well) plus retrieval practice. How-to: log the error and why it happened, then re-test it later."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Worked examples first, then fade them out",
+      "slug": "worked-examples-fading",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Supported by cognitive-load research (the worked-example effect and fading). Best for maths and science procedures: study a full solution, then one with steps missing, then solve alone."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Mnemonics: great for lists, useless for understanding",
+      "slug": "mnemonics-and-memory-palace",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Acronyms and the method of loci are long-established for remembering ordered lists. The honest caveat is the lesson: they help recall, not comprehension. No mnemonics with crude or inappropriate wording."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Command words: describe vs. explain vs. evaluate",
+      "slug": "command-words",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Common across boards, but each board publishes its own official definitions -- describe the general difference and tell students to check their own board's list. Never quote one board's definitions as universal."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Practise the way you'll be tested",
+      "slug": "practise-like-the-exam",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Retrieval practice plus transfer-appropriate processing: timed, closed-book practice beats open-book review for exam prep. Board-neutral -- no specific paper formats or timings."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Make it specific: 'if-then' study plans",
+      "slug": "implementation-intentions",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Implementation intentions (Gollwitzer) are well-supported: 'after dinner I'll do ten equilibrium questions at my desk' beats 'study chemistry'. Practical and non-preachy."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "The hidden cost of switching tasks",
+      "slug": "task-switching-cost",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Task-switching costs are well-established. Frame around notifications and hopping between subjects mid-session. Avoid the 'a phone on the desk drains your brain' claim -- replications of that study are mixed."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Why sleep is part of studying",
+      "slug": "sleep-and-memory",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Sleep's role in memory consolidation is well-established. Keep it educational (why an all-nighter backfires for recall) -- no sleep-hour prescriptions, supplements, or health advice."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Learning styles: the study myth that won't go away",
+      "slug": "learning-styles-myth",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Strong research consensus that matching teaching to a preferred 'visual/auditory/kinaesthetic' style doesn't improve learning (Pashler et al., 2008). Be respectful -- many students were taught it; frame as 'what the research found', not 'your teacher was wrong'. Point to what does work (dual coding, retrieval)."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Estimate before you calculate",
+      "slug": "estimate-before-calculating",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "A checking habit for maths and science: a quick order-of-magnitude estimate catches calculator slips and unit errors. Board-neutral."
+    },
+    {
+      "subject": "Study skills",
+      "topic": "Spend exam time in proportion to marks",
+      "slug": "time-per-mark",
+      "archetype": "technique",
+      "safe_for": "all",
+      "notes": "Practical exam technique: work out minutes per mark at the start and move on from stuck questions. Board-neutral -- no specific papers' timings or mark totals."
     }
   ]
 }
