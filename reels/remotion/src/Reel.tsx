@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { AbsoluteFill, OffthreadVideo, Img, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
+import { AbsoluteFill, OffthreadVideo, Freeze, Img, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
 import { direct, PAGE, Ev, Regions, Beat, cardH } from './director';
 import agentEv from './footage/agent/events.json'; import agentVo from './footage/agent/vo.json';
 import quizEv from './footage/quiz/events.json'; import quizVo from './footage/quiz/vo.json';
@@ -130,6 +130,7 @@ export const Reel: React.FC<{ variant?: string; footage?: string }> = ({ variant
   const CW = V.w ?? CARD.w, CX = (1080 - CW) / 2;
   const frame = useCurrentFrame(); const { fps, durationInFrames } = useVideoConfig(); const t = frame / fps;
   const evs = (F.events as { events: Ev[] }).events; const t0 = evs.find(e => e.type === 'rec_start')!.t;
+  const clipFrames = Math.floor((evs.find(e => e.type === 'rec_end')!.t - t0) * fps);   // recording length; anything after is end hold
   const D = useMemo(() => direct(evs, F.regions, { w: CW, hMax: V.hMax }, fps, t0, durationInFrames / fps, F.beats ?? []), [variant, footage]);
   const cam = D.cam[Math.min(frame, D.cam.length - 1)], cur = D.cursor[Math.min(frame, D.cursor.length - 1)];
   // page px → card px
@@ -248,7 +249,9 @@ export const Reel: React.FC<{ variant?: string; footage?: string }> = ({ variant
         boxShadow: V.kind === 'challenge' ? `0 0 0 2px ${VIOLET_L}, 0 0 90px -10px ${VIOLET}aa` : '0 0 0 1.5px #ffffff1f', opacity: intro, transform: `scale(${0.97 + 0.03 * intro})` }}>
         {/* capture is 2× (2640×1720): scale s/2 so 1 page px = s card px */}
         <div style={{ position: 'absolute', left: 0, top: 0, width: PAGE.w * 2, height: PAGE.h * 2, transformOrigin: '0 0', transform: `translate(${tx}px, ${ty}px) scale(${cam.s / 2})` }}>
-          <OffthreadVideo src={staticFile(F.clip)} style={{ width: PAGE.w * 2, height: PAGE.h * 2 }} muted />
+          {/* past the end of the recording (end hold for a long voiceover): freeze its last frame */}
+          {frame < clipFrames ? <OffthreadVideo src={staticFile(F.clip)} style={{ width: PAGE.w * 2, height: PAGE.h * 2 }} muted />
+            : <Freeze frame={clipFrames - 2}><OffthreadVideo src={staticFile(F.clip)} style={{ width: PAGE.w * 2, height: PAGE.h * 2 }} muted /></Freeze>}
         </div>
         {ripple && (() => { const k = (t - ripple.t) / 0.45, r = 10 + 38 * (1 - Math.pow(1 - k, 3));
           return <div style={{ position: 'absolute', left: px(ripple.x) - r, top: py(ripple.y) - r, width: 2 * r, height: 2 * r, borderRadius: '50%',

@@ -1,5 +1,5 @@
 import React from 'react'; import { Composition } from 'remotion'; import { Reel, FOOTAGE } from './Reel';
-const dur = (f: string) => { const e = FOOTAGE[f].events.events; const t0 = e.find((x: any) => x.type === 'rec_start').t, t1 = e.find((x: any) => x.type === 'rec_end').t; return Math.floor((t1 - t0) * 30); };
+const dur = (f: string) => { const e = FOOTAGE[f].events.events; const t0 = e.find((x: any) => x.type === 'rec_start').t, t1 = e.find((x: any) => x.type === 'rec_end').t; return Math.floor((t1 - t0 + (FOOTAGE[f].vo.hold ?? 0)) * 30); };   // + end hold when the voiceover outruns the recording
 // Full reels + 10 s frame-style previews (each frame paired with the content type it was designed for)
 const PREVIEWS: [string, string][] = [['hook', 'agent'], ['browser', 'agent'], ['coldopen', 'agent'], ['steps', 'agent'],
   ['cinematic', 'agent'], ['prompt', 'agent'], ['challenge', 'quiz'], ['qhook', 'quiz'], ['stack', 'flash']];
