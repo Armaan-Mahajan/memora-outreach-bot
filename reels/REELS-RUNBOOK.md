@@ -63,7 +63,7 @@ Do not read `run.log` while the run is going well. It's long, and reading it was
    This is a check, not a fix. Never re-render or re-record.
 2. Read `~/reels-run/out/summary.json`. It holds each reel's length, size and audio check.
 3. Send the four MP4s with `SendUserFile` in a single call, `status: proactive`, `display: render`.
-4. Finish with a short report: one line per reel with its length and OK or FLAGGED (plus what you saw if flagged), and the total run time. Don't send the contact sheets unless a reel was flagged.
+4. Finish with a short report: one line per reel with its length and OK or FLAGGED (plus what you saw if flagged), the total run time, and the `hardware` line from `summary.json` (cores, CPU model, RAM). That's how we track what the scheduled container gets. Don't send the contact sheets unless a reel was flagged.
 
 ### 6. On failure
 Report:

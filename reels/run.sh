@@ -51,7 +51,9 @@ CHROME_SHELL=$(ls -d /opt/pw-browsers/chromium_headless_shell-*/chrome-linux/hea
 [ -n "$CHROME_SHELL" ] || fail "no Chromium headless shell under /opt/pw-browsers"
 [ -n "$REELS" ] || fail "no reels selected (check ONLY)"
 CORES=$(nproc 2>/dev/null || echo 1); RENDER_CONC=$(( CORES >= 2 ? 2 : 1 ))   # scheduled containers can have 1 core; Remotion refuses more workers than cores
-echo "cpu cores: $CORES → render concurrency $RENDER_CONC" | tee -a "$LOG"
+CPU_MODEL=$(lscpu 2>/dev/null | sed -n 's/^Model name:[[:space:]]*//p' | head -1); MEM_GB=$(awk '/MemTotal/ {printf "%.1f", $2/1048576}' /proc/meminfo 2>/dev/null)
+export HW="${CORES} core(s), ${CPU_MODEL:-unknown CPU}, ${MEM_GB:-?} GB RAM"      # logged every run so we learn what scheduled containers get
+echo "hardware: $HW → render concurrency $RENDER_CONC" | tee -a "$LOG"
 echo "reels: $REELS" | tee -a "$LOG"
 
 # ── 2. memora-web (demo branch) ────────────────────────────────────────────────
@@ -148,13 +150,15 @@ rows, bad = [], []
 for r in (r for r in cfg["reels"] if r["name"] in names):
     f = f"{out}/{r['output']}"
     d = float(probe(f, ["-show_entries", "format=duration"]) or 0)
-    wh = probe(f, ["-select_streams", "v:0", "-show_entries", "stream=width,height"])
+    # ffprobe's csv output can carry a trailing separator ("1080,1920,"): compare the numbers, not the raw string
+    wh = ",".join(x for x in probe(f, ["-select_streams", "v:0", "-show_entries", "stream=width,height"]).replace("\n", ",").split(",") if x.strip())
     aud = probe(f, ["-select_streams", "a:0", "-show_entries", "stream=codec_name"])
     lo, hi = r["seconds"]; ok = lo - 0.5 <= d <= hi + 0.5 and wh == "1080,1920" and aud == "aac"
     rows.append({"reel": r["name"], "file": r["output"], "seconds": round(d, 1), "target": [lo, hi], "size": wh, "audio": aud, "ok": ok})
     print(f"  {'OK ' if ok else 'BAD'} {r['output']}: {d:.1f}s (target {lo}-{hi}), {wh}, audio={aud}")
     if not ok: bad.append(r["name"])
-json.dump({"reels": rows}, open(f"{out}/summary.json", "w"), indent=1)
+import os
+json.dump({"hardware": os.environ.get("HW", "unknown"), "reels": rows}, open(f"{out}/summary.json", "w"), indent=1)
 sys.exit(1 if bad else 0)
 EOF
 # contact sheets (8 evenly spaced frames per reel) for the run's own visual check
