@@ -9,6 +9,8 @@
 #
 # Optional env:
 #   WORK        where everything is built (default ~/reels-run). Must be outside the outreach-bot clone.
+#   MEMORA_WEB_TOKEN  read-only GitHub token for the private memora-web repo (scheduled runs: from the Vault).
+#               Sent as a one-off HTTP Basic header via GIT_CONFIG_* env vars, never written to .git/config or disk.
 #   MEMORA_WEB  path to an existing memora-web clone to reuse (it is fetched and switched to the demo branch).
 #   ONLY        space-separated reel names to run a subset, e.g. ONLY="quiz-full".
 set -Eeuo pipefail
@@ -54,12 +56,18 @@ echo "reels: $REELS" | tee -a "$LOG"
 stage memora-web
 BRANCH=$(cfg "c['memora_web']['branch']")
 MW="${MEMORA_WEB:-$WORK/memora-web}"
+if [ -n "${MEMORA_WEB_TOKEN:-}" ]; then        # auth for this stage's git calls only
+  export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+         GIT_CONFIG_VALUE_0="Authorization: Basic $(printf 'x-access-token:%s' "$MEMORA_WEB_TOKEN" | base64 | tr -d '\n')"
+fi
 if [ -d "$MW/.git" ]; then
-  git -C "$MW" fetch --quiet origin "$BRANCH" >>"$LOG" 2>&1
+  git -C "$MW" fetch --quiet origin "$BRANCH" >>"$LOG" 2>&1 || fail "could not fetch memora-web ($BRANCH) — token missing or expired?"
   git -C "$MW" checkout --quiet -B "$BRANCH" "origin/$BRANCH" >>"$LOG" 2>&1
 else
-  git clone --quiet --branch "$BRANCH" "$(cfg "c['memora_web']['repo']")" "$MW" >>"$LOG" 2>&1 || fail "could not clone memora-web ($BRANCH)"
+  git clone --quiet --depth 1 --branch "$BRANCH" "$(cfg "c['memora_web']['repo']")" "$MW" >>"$LOG" 2>&1 \
+    || fail "could not clone memora-web ($BRANCH) — is MEMORA_WEB_TOKEN set, unexpired, and scoped to memora-web (Contents: read)?"
 fi
+unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 MEMORA_WEB_TOKEN
 echo "memora-web at $(git -C "$MW" rev-parse --short HEAD)" | tee -a "$LOG"
 grep -q "process.env.DEMO_PASSWORD" "$MW/scripts/seed-demo-content.ts" \
   || fail "memora-web's seed script still hard-codes the password — push the demo-recording-mode change first"

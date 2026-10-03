@@ -26,24 +26,23 @@ Use the Supabase MCP `get_project` for `dtyiuknezuzqohdxicbg` (memora-outreach).
 ```bash
 git clone --depth 1 https://github.com/Armaan-Mahajan/memora-outreach-bot.git ~/ob
 ```
-memora-web is private. If the session already has it at `/home/claude/memora-web`, reuse it with `MEMORA_WEB=/home/claude/memora-web`; `run.sh` fetches and switches it to `demo-recording-mode` itself. Otherwise leave `MEMORA_WEB` unset and `run.sh` clones it.
+memora-web is **private**, and a scheduled session has no GitHub access to it. You do **not** clone it yourself: `run.sh` clones the `demo-recording-mode` branch using the read-only token from stage 2 (`MEMORA_WEB_TOKEN`). If the clone fails, the run stops at the `memora-web` stage. Report that and stop; don't try other credentials, URLs or tools.
 
 ### 2. Secrets
-Read both secrets with the Supabase MCP `execute_sql` on `dtyiuknezuzqohdxicbg`:
+Read the three secrets with the Supabase MCP `execute_sql` on `dtyiuknezuzqohdxicbg`:
 ```sql
-select name, decrypted_secret from vault.decrypted_secrets where name in ('demo_password', 'elevenlabs_api_key');
+select name, decrypted_secret from vault.decrypted_secrets where name in ('demo_password', 'elevenlabs_api_key', 'memora_web_read_token');
 ```
-Write them to `~/.reels-secrets.env` as `DEMO_PASSWORD=…` and `ELEVENLABS_API_KEY=…`, one per line, using the file-writing tool. Then run `chmod 600 ~/.reels-secrets.env`.
+Write them to `~/.reels-secrets.env` as `DEMO_PASSWORD=…`, `ELEVENLABS_API_KEY=…` and `MEMORA_WEB_TOKEN=…`, one per line, using the file-writing tool. Then run `chmod 600 ~/.reels-secrets.env`.
 
-**Never** print, echo, cat, log or repeat either value: not in a message, a command, a file inside a repo, or your final report. If the Vault read is refused or returns fewer than two rows, stop and report that. Do not look for the secrets anywhere else.
+**Never** print, echo, cat, log or repeat any of these values: not in a message, a command, a file inside a repo, or your final report. If the Vault read is refused or returns fewer than three rows, stop and report that. Do not look for the secrets anywhere else.
 
 ### 3. Start the run in the background
 `run.sh` takes about 90 minutes, which is longer than a single shell call can wait. Start it detached, then delete the secrets file once the run has picked the secrets up:
 ```bash
-cd ~ && (set -a; . ~/.reels-secrets.env; set +a; WORK=~/reels-run MEMORA_WEB=/home/claude/memora-web nohup bash ~/ob/reels/run.sh > ~/reels-console.log 2>&1 &)
+cd ~ && (set -a; . ~/.reels-secrets.env; set +a; WORK=~/reels-run nohup bash ~/ob/reels/run.sh > ~/reels-console.log 2>&1 &)
 sleep 20 && rm -f ~/.reels-secrets.env && cat ~/reels-run/status.json
 ```
-Drop `MEMORA_WEB=…` if `/home/claude/memora-web` doesn't exist.
 
 ### 4. Wait
 Every 8 minutes, run `sleep 480; cat ~/reels-run/status.json`. That's one check per shell call, and nothing else in between.
@@ -77,11 +76,11 @@ Send any reels that did finish rendering (`~/reels-run/out/*.mp4`), saying which
 ## Hard limits
 - Never edit, commit or push any repository. The clones are read-only working copies.
 - Database: the only SQL you run yourself is stage 0's `get_project` and stage 2's single Vault `select`. Nothing else, ever: no INSERT, UPDATE, DELETE or DDL. (`run.sh` resets the disposable demo account in memora-web's project through the app's own seed script; that's expected.)
-- Vault: read only `demo_password` and `elevenlabs_api_key`.
+- Vault: read only `demo_password`, `elevenlabs_api_key` and `memora_web_read_token`.
 - Never print secrets (see stage 2). Delete `~/.reels-secrets.env` as soon as `run.sh` has started.
 - No posting anywhere: not Instagram, not the outreach dashboard, not Supabase storage.
 - Shell commands are limited to:
-  - `git clone` of the outreach-bot repo
+  - `git clone` of the outreach-bot repo (memora-web is cloned by `run.sh`, never by you)
   - `bash ~/ob/reels/run.sh`, started the way stage 3 shows
   - `sleep`, `cat`, `tail`, `ls`, and `chmod 600` on the secrets file
   - `rm -f ~/.reels-secrets.env`
