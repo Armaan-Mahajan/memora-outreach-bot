@@ -50,6 +50,8 @@ python3 -c "import numpy" 2>/dev/null || fail "python3 numpy missing (needed for
 CHROME_SHELL=$(ls -d /opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell 2>/dev/null | head -1 || true)
 [ -n "$CHROME_SHELL" ] || fail "no Chromium headless shell under /opt/pw-browsers"
 [ -n "$REELS" ] || fail "no reels selected (check ONLY)"
+CORES=$(nproc 2>/dev/null || echo 1); RENDER_CONC=$(( CORES >= 2 ? 2 : 1 ))   # scheduled containers can have 1 core; Remotion refuses more workers than cores
+echo "cpu cores: $CORES → render concurrency $RENDER_CONC" | tee -a "$LOG"
 echo "reels: $REELS" | tee -a "$LOG"
 
 # ── 2. memora-web (demo branch) ────────────────────────────────────────────────
@@ -129,7 +131,7 @@ done
 for r in $REELS; do
   stage "render:$r"
   comp=$(rcfg "$r" composition); out="$WORK/out/$(rcfg "$r" output)"
-  (cd "$RM" && npx remotion render src/index.ts "$comp" "$WORK/render-$r.mp4" --concurrency=2 --log=error \
+  (cd "$RM" && npx remotion render src/index.ts "$comp" "$WORK/render-$r.mp4" --concurrency="$RENDER_CONC" --log=error \
       --browser-executable="$CHROME_SHELL" >>"$LOG" 2>&1) || fail "remotion render failed"
   ffmpeg -y -loglevel error -i "$WORK/render-$r.mp4" -c:v copy -af loudnorm=I=-15:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k "$out" \
     || fail "loudness pass failed"
