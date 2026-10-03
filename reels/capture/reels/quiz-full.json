@@ -1,0 +1,222 @@
+{
+ "name": "quiz-full",
+ "start_url": "/quizzes/ai-gen",
+ "viewport": {
+  "w": 1320,
+  "h": 860
+ },
+ "speed": {
+  "normal": 11,
+  "fast": 3
+ },
+ "steps": [
+  {
+   "do": "pause",
+   "ms": 800
+  },
+  {
+   "do": "press",
+   "target": {
+    "role": "slider"
+   },
+   "as": "slider",
+   "key": "ArrowLeft",
+   "times": 2,
+   "gap": 380
+  },
+  {
+   "do": "pause",
+   "ms": 400
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "textarea"
+   },
+   "as": "textarea"
+  },
+  {
+   "do": "type",
+   "text": "AP Bio photosynthesis \u2014 light reactions and the Calvin cycle"
+  },
+  {
+   "do": "pause",
+   "ms": 450
+  },
+  {
+   "do": "click",
+   "target": {
+    "role": "button",
+    "name": "Generate MCQ Quiz"
+   },
+   "as": "generate",
+   "expect_url": "/quizzes/ai-gen/save"
+  },
+  {
+   "do": "wait",
+   "for": {
+    "url": "/quizzes/ai-gen/save"
+   }
+  },
+  {
+   "do": "wait",
+   "for": {
+    "load": true
+   },
+   "mark": "results_open"
+  },
+  {
+   "do": "pause",
+   "ms": 1500
+  },
+  {
+   "do": "scroll",
+   "dy": 380,
+   "ms": 1200,
+   "page": true
+  },
+  {
+   "do": "pause",
+   "ms": 700
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "input[placeholder^=\"Name your quiz\"]"
+   },
+   "as": "title"
+  },
+  {
+   "do": "type",
+   "text": "Photosynthesis \u2014 Unit 3 check"
+  },
+  {
+   "do": "pause",
+   "ms": 400
+  },
+  {
+   "do": "click",
+   "target": {
+    "role": "button",
+    "name": "Save Quiz"
+   },
+   "as": "save",
+   "expect_url": "/quizzes$"
+  },
+  {
+   "do": "wait",
+   "for": {
+    "url": "/quizzes$"
+   }
+  },
+  {
+   "do": "wait",
+   "for": {
+    "load": true
+   },
+   "mark": "list_open"
+  },
+  {
+   "do": "pause",
+   "ms": 900
+  },
+  {
+   "do": "click",
+   "target": {
+    "text": "Photosynthesis \u2014 Unit 3 check"
+   },
+   "as": "card"
+  },
+  {
+   "do": "pause",
+   "ms": 700
+  },
+  {
+   "do": "click",
+   "target": {
+    "role": "button",
+    "name": "Start Quiz|Resume Quiz|Restart Quiz"
+   },
+   "as": "start",
+   "expect_url": "/quizzes/viewer/"
+  },
+  {
+   "do": "wait",
+   "for": {
+    "url": "/quizzes/viewer/"
+   }
+  },
+  {
+   "do": "wait",
+   "for": {
+    "load": true
+   },
+   "mark": "viewer_open"
+  },
+  {
+   "do": "pause",
+   "ms": 1300
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has-text(\"Thylakoid membrane\")"
+   },
+   "as": "answer"
+  },
+  {
+   "do": "pause",
+   "ms": 350
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has(svg.lucide-check)"
+   },
+   "as": "check",
+   "mark": "checked1"
+  },
+  {
+   "do": "pause",
+   "ms": 1500
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has(svg.lucide-chevron-right)"
+   },
+   "as": "next"
+  },
+  {
+   "do": "pause",
+   "ms": 1000
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has-text(\"PSII only\")"
+   },
+   "as": "answer"
+  },
+  {
+   "do": "pause",
+   "ms": 350
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has(svg.lucide-check)"
+   },
+   "as": "check",
+   "mark": "checked2"
+  },
+  {
+   "do": "pause",
+   "ms": 1800
+  }
+ ],
+ "hide": [
+  "header:has(.memora-nav-pill)",
+  ".memora-nav-pill-glass-portal"
+ ]
+}

@@ -1,0 +1,49 @@
+{
+ "name": "flashfull",
+ "voice_name": "Jessica",
+ "voice_id": "cgSgspJ2msm6clMCkdW9",
+ "models": [
+  "eleven_v4",
+  "eleven_v3",
+  "eleven_multilingual_v2"
+ ],
+ "voice_settings": {
+  "stability": 0.45,
+  "similarity_boost": 0.8,
+  "style": 0.2,
+  "speed": 1.05
+ },
+ "lines": [
+  {
+   "text": "Still making flashcards by hand?",
+   "anchor": "rec_start",
+   "offset": 0.2
+  },
+  {
+   "text": "Just type the topic,",
+   "anchor": "click:textarea",
+   "offset": 1.55
+  },
+  {
+   "text": "and Memora builds the whole deck.",
+   "anchor": "results_open",
+   "offset": 0.2
+  },
+  {
+   "text": "Name it, hit save, and you're studying straight away.",
+   "anchor": "click:title",
+   "offset": 0.3
+  },
+  {
+   "text": "Flip, check yourself, next card.",
+   "anchor": "flip1",
+   "offset": 0.0
+  },
+  {
+   "text": "Link's in bio.",
+   "end_at": "rec_end",
+   "offset": -0.7
+  }
+ ],
+ "_doc": "Each line starts at <anchor event> + offset seconds (clip time). A line with end_at instead ENDS at rec_end + offset. tools/place_vo.py resolves these against the recording's events.json."
+}

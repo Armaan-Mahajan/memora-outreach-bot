@@ -1,0 +1,196 @@
+{
+ "name": "flashcards-full",
+ "start_url": "/flashcards/ai-gen",
+ "viewport": {
+  "w": 1320,
+  "h": 860
+ },
+ "speed": {
+  "normal": 11,
+  "fast": 3
+ },
+ "steps": [
+  {
+   "do": "pause",
+   "ms": 900
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "textarea"
+   },
+   "as": "textarea"
+  },
+  {
+   "do": "type",
+   "text": "Photosynthesis key terms for AP Bio"
+  },
+  {
+   "do": "pause",
+   "ms": 450
+  },
+  {
+   "do": "click",
+   "target": {
+    "role": "button",
+    "name": "Generate .*Flashcards"
+   },
+   "as": "generate",
+   "expect_url": "/flashcards/ai-gen/save"
+  },
+  {
+   "do": "wait",
+   "for": {
+    "url": "/flashcards/ai-gen/save"
+   }
+  },
+  {
+   "do": "wait",
+   "for": {
+    "load": true
+   },
+   "mark": "results_open"
+  },
+  {
+   "do": "pause",
+   "ms": 1500
+  },
+  {
+   "do": "scroll",
+   "dy": 300,
+   "ms": 1100,
+   "page": true
+  },
+  {
+   "do": "pause",
+   "ms": 600
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "input[placeholder^=\"Give your deck\"]"
+   },
+   "as": "title"
+  },
+  {
+   "do": "type",
+   "text": "Photosynthesis \u2014 key terms"
+  },
+  {
+   "do": "pause",
+   "ms": 400
+  },
+  {
+   "do": "click",
+   "target": {
+    "role": "button",
+    "name": "Save Deck"
+   },
+   "as": "save",
+   "expect_url": "/flashcards/viewer/"
+  },
+  {
+   "do": "wait",
+   "for": {
+    "url": "/flashcards/viewer/"
+   }
+  },
+  {
+   "do": "wait",
+   "for": {
+    "load": true
+   },
+   "mark": "viewer_open"
+  },
+  {
+   "do": "pause",
+   "ms": 1300
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "[class*=\"flipCardInner\"]"
+   },
+   "as": "card",
+   "mark": "flip1"
+  },
+  {
+   "do": "pause",
+   "ms": 1700
+  },
+  {
+   "do": "click",
+   "target": {
+    "role": "button",
+    "name": "^Correct"
+   },
+   "as": "mark"
+  },
+  {
+   "do": "pause",
+   "ms": 500
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has(svg.lucide-chevron-right)"
+   },
+   "as": "next"
+  },
+  {
+   "do": "pause",
+   "ms": 1000
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "[class*=\"flipCardInner\"]"
+   },
+   "as": "card",
+   "mark": "flip2"
+  },
+  {
+   "do": "pause",
+   "ms": 1700
+  },
+  {
+   "do": "click",
+   "target": {
+    "role": "button",
+    "name": "^Correct"
+   },
+   "as": "mark"
+  },
+  {
+   "do": "pause",
+   "ms": 500
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has(svg.lucide-chevron-right)"
+   },
+   "as": "next"
+  },
+  {
+   "do": "pause",
+   "ms": 1000
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "[class*=\"flipCardInner\"]"
+   },
+   "as": "card",
+   "mark": "flip3"
+  },
+  {
+   "do": "pause",
+   "ms": 1900
+  }
+ ],
+ "hide": [
+  "header:has(.memora-nav-pill)",
+  ".memora-nav-pill-glass-portal"
+ ]
+}

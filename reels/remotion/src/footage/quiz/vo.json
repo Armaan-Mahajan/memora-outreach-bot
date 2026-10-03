@@ -1,0 +1,127 @@
+{
+ "voice": "Jessica",
+ "lines": [
+  {
+   "at": 0.3,
+   "file": "line-1.mp3",
+   "dur": 2.273,
+   "model": "eleven_v4",
+   "text": "Need practice questions before a test?",
+   "words": [
+    {
+     "w": "Need",
+     "s": 0.3,
+     "e": 0.54
+    },
+    {
+     "w": "practice",
+     "s": 0.62,
+     "e": 0.94
+    },
+    {
+     "w": "questions",
+     "s": 1.02,
+     "e": 1.42
+    },
+    {
+     "w": "before",
+     "s": 1.5,
+     "e": 1.74
+    },
+    {
+     "w": "a",
+     "s": 1.78,
+     "e": 1.82
+    },
+    {
+     "w": "test?",
+     "s": 1.9,
+     "e": 2.62
+    }
+   ]
+  },
+  {
+   "at": 2.7,
+   "file": "line-2.mp3",
+   "dur": 2.273,
+   "model": "eleven_v4",
+   "text": "Type the topic, hit generate,",
+   "words": [
+    {
+     "w": "Type",
+     "s": 2.7,
+     "e": 2.94
+    },
+    {
+     "w": "the",
+     "s": 3.02,
+     "e": 3.1
+    },
+    {
+     "w": "topic,",
+     "s": 3.34,
+     "e": 3.9
+    },
+    {
+     "w": "hit",
+     "s": 3.98,
+     "e": 4.14
+    },
+    {
+     "w": "generate,",
+     "s": 4.22,
+     "e": 5.02
+    }
+   ]
+  },
+  {
+   "at": 5.9,
+   "file": "line-3.mp3",
+   "dur": 2.691,
+   "model": "eleven_v4",
+   "text": "and Memora writes the whole quiz for you.",
+   "words": [
+    {
+     "w": "and",
+     "s": 5.9,
+     "e": 6.06
+    },
+    {
+     "w": "Memora",
+     "s": 6.18,
+     "e": 6.62
+    },
+    {
+     "w": "writes",
+     "s": 6.7,
+     "e": 7.02
+    },
+    {
+     "w": "the",
+     "s": 7.1,
+     "e": 7.18
+    },
+    {
+     "w": "whole",
+     "s": 7.26,
+     "e": 7.5
+    },
+    {
+     "w": "quiz",
+     "s": 7.58,
+     "e": 7.9
+    },
+    {
+     "w": "for",
+     "s": 7.98,
+     "e": 8.06
+    },
+    {
+     "w": "you.",
+     "s": 8.14,
+     "e": 8.62
+    }
+   ]
+  }
+ ]
+}

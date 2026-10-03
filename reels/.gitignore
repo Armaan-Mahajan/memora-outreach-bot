@@ -1,0 +1,7 @@
+node_modules/
+capture/out/
+voice/out/
+remotion/out/
+remotion/public/footage/
+remotion/public/vo/
+remotion/public/audio/

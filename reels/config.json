@@ -1,0 +1,61 @@
+{
+ "_doc": "Reels pipeline config. The Supabase URL and publishable key are memora-web's PUBLIC browser values (they ship in the site's JavaScript); the demo password and ElevenLabs key are NOT here \u2014 run.sh takes them from the environment.",
+ "memora_web": {
+  "repo": "https://github.com/Armaan-Mahajan/memora-web.git",
+  "branch": "demo-recording-mode"
+ },
+ "public_env": {
+  "NEXT_PUBLIC_SUPABASE_URL": "https://klcwcegfmxcahskfipws.supabase.co",
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_Fdr6xlXWXwwTxeTap-MrqQ_zVvm2p89"
+ },
+ "reels": [
+  {
+   "name": "agent-course",
+   "capture": "capture/reels/agent-course.json",
+   "vo": "voice/vo-course.json",
+   "footage": "course",
+   "composition": "Course",
+   "output": "memora-reel-agent-course.mp4",
+   "seconds": [
+    30,
+    45
+   ]
+  },
+  {
+   "name": "agent-lesson",
+   "capture": "capture/reels/agent-lesson.json",
+   "vo": "voice/vo-lesson.json",
+   "footage": "lesson",
+   "composition": "CourseLesson",
+   "output": "memora-reel-agent-lesson.mp4",
+   "seconds": [
+    45,
+    60
+   ]
+  },
+  {
+   "name": "quiz-full",
+   "capture": "capture/reels/quiz-full.json",
+   "vo": "voice/vo-quizfull.json",
+   "footage": "quizfull",
+   "composition": "QuizFull",
+   "output": "memora-reel-quiz.mp4",
+   "seconds": [
+    20,
+    30
+   ]
+  },
+  {
+   "name": "flashcards-full",
+   "capture": "capture/reels/flashcards-full.json",
+   "vo": "voice/vo-flashfull.json",
+   "footage": "flashfull",
+   "composition": "FlashcardsFull",
+   "output": "memora-reel-flashcards.mp4",
+   "seconds": [
+    20,
+    30
+   ]
+  }
+ ]
+}

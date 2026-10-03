@@ -1,0 +1,213 @@
+{
+ "voice": "Jessica",
+ "lines": [
+  {
+   "at": 0.2,
+   "file": "line-1.mp3",
+   "dur": 2.351,
+   "text": "Still making flashcards by hand?",
+   "words": [
+    {
+     "w": "Still",
+     "s": 0.2,
+     "e": 0.52
+    },
+    {
+     "w": "making",
+     "s": 0.6,
+     "e": 0.84
+    },
+    {
+     "w": "flashcards",
+     "s": 1.0,
+     "e": 1.56
+    },
+    {
+     "w": "by",
+     "s": 1.64,
+     "e": 1.8
+    },
+    {
+     "w": "hand?",
+     "s": 1.88,
+     "e": 2.6
+    }
+   ]
+  },
+  {
+   "at": 2.75,
+   "file": "line-2.mp3",
+   "dur": 1.567,
+   "text": "Just type the topic,",
+   "words": [
+    {
+     "w": "Just",
+     "s": 2.75,
+     "e": 2.99
+    },
+    {
+     "w": "type",
+     "s": 3.07,
+     "e": 3.31
+    },
+    {
+     "w": "the",
+     "s": 3.39,
+     "e": 3.43
+    },
+    {
+     "w": "topic,",
+     "s": 3.47,
+     "e": 4.27
+    }
+   ]
+  },
+  {
+   "at": 4.6,
+   "file": "line-3.mp3",
+   "dur": 2.429,
+   "text": "and Memora builds the whole deck.",
+   "words": [
+    {
+     "w": "and",
+     "s": 4.6,
+     "e": 4.76
+    },
+    {
+     "w": "Memora",
+     "s": 4.88,
+     "e": 5.32
+    },
+    {
+     "w": "builds",
+     "s": 5.48,
+     "e": 5.8
+    },
+    {
+     "w": "the",
+     "s": 5.88,
+     "e": 5.96
+    },
+    {
+     "w": "whole",
+     "s": 6.04,
+     "e": 6.28
+    },
+    {
+     "w": "deck.",
+     "s": 6.36,
+     "e": 7.08
+    }
+   ]
+  },
+  {
+   "at": 8.2,
+   "file": "line-4.mp3",
+   "dur": 3.553,
+   "text": "Name it, hit save, and you're studying straight away.",
+   "words": [
+    {
+     "w": "Name",
+     "s": 8.2,
+     "e": 8.52
+    },
+    {
+     "w": "it,",
+     "s": 8.6,
+     "e": 8.92
+    },
+    {
+     "w": "hit",
+     "s": 9.04,
+     "e": 9.16
+    },
+    {
+     "w": "save,",
+     "s": 9.24,
+     "e": 9.8
+    },
+    {
+     "w": "and",
+     "s": 9.92,
+     "e": 10.04
+    },
+    {
+     "w": "you're",
+     "s": 10.12,
+     "e": 10.28
+    },
+    {
+     "w": "studying",
+     "s": 10.4,
+     "e": 10.76
+    },
+    {
+     "w": "straight",
+     "s": 10.84,
+     "e": 11.08
+    },
+    {
+     "w": "away.",
+     "s": 11.16,
+     "e": 11.8
+    }
+   ]
+  },
+  {
+   "at": 13.6,
+   "file": "line-5.mp3",
+   "dur": 2.847,
+   "text": "Flip, check yourself, next card.",
+   "words": [
+    {
+     "w": "Flip,",
+     "s": 13.6,
+     "e": 14.24
+    },
+    {
+     "w": "check",
+     "s": 14.32,
+     "e": 14.48
+    },
+    {
+     "w": "yourself,",
+     "s": 14.56,
+     "e": 15.36
+    },
+    {
+     "w": "next",
+     "s": 15.44,
+     "e": 15.68
+    },
+    {
+     "w": "card.",
+     "s": 15.84,
+     "e": 16.4
+    }
+   ]
+  },
+  {
+   "at": 21.7,
+   "file": "line-6.mp3",
+   "dur": 1.306,
+   "text": "Link's in bio.",
+   "words": [
+    {
+     "w": "Link's",
+     "s": 21.7,
+     "e": 22.02
+    },
+    {
+     "w": "in",
+     "s": 22.06,
+     "e": 22.1
+    },
+    {
+     "w": "bio.",
+     "s": 22.18,
+     "e": 22.82
+    }
+   ]
+  }
+ ]
+}

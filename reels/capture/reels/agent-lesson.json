@@ -1,0 +1,259 @@
+{
+ "name": "agent-lesson",
+ "start_url": "/agent",
+ "viewport": {
+  "w": 1320,
+  "h": 860
+ },
+ "speed": {
+  "normal": 11,
+  "fast": 3
+ },
+ "steps": [
+  {
+   "do": "pause",
+   "ms": 900
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "textarea"
+   },
+   "as": "textarea"
+  },
+  {
+   "do": "type",
+   "text": "AP Bio photosynthesis \u2014 light reactions, Calvin cycle, and C4/CAM plants"
+  },
+  {
+   "do": "pause",
+   "ms": 450
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has(svg.lucide-zap)"
+   },
+   "as": "generate"
+  },
+  {
+   "do": "wait",
+   "for": {
+    "css": "[role=dialog]"
+   },
+   "mark": "outline_open"
+  },
+  {
+   "do": "wait",
+   "for": {
+    "enabled": {
+     "role": "button",
+     "name": "Proceed"
+    }
+   },
+   "mark": "outline_done"
+  },
+  {
+   "do": "pause",
+   "ms": 1600
+  },
+  {
+   "do": "click",
+   "target": {
+    "role": "button",
+    "name": "Proceed"
+   },
+   "as": "proceed",
+   "mark": "course_gen_start"
+  },
+  {
+   "do": "pause",
+   "ms": 500
+  },
+  {
+   "do": "speed",
+   "k": "fast",
+   "mark": "sped_up_start"
+  },
+  {
+   "do": "wait",
+   "for": {
+    "text": "Course generated"
+   }
+  },
+  {
+   "do": "speed",
+   "k": "normal",
+   "mark": "course_gen_done"
+  },
+  {
+   "do": "hover",
+   "target": {
+    "text": "Click to redirect"
+   }
+  },
+  {
+   "do": "pause",
+   "ms": 600
+  },
+  {
+   "do": "click",
+   "target": {
+    "text": "Click to redirect"
+   },
+   "as": "toast_link",
+   "expect_url": "/agent/viewer/"
+  },
+  {
+   "do": "wait",
+   "for": {
+    "load": true
+   },
+   "mark": "viewer_open"
+  },
+  {
+   "do": "pause",
+   "ms": 1400
+  },
+  {
+   "do": "scroll",
+   "dy": 330,
+   "ms": 1100
+  },
+  {
+   "do": "pause",
+   "ms": 700
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "#content-viewer [class*=\"flipCardInner\"]"
+   },
+   "as": "card",
+   "mark": "card_flip"
+  },
+  {
+   "do": "pause",
+   "ms": 1600
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "#content-viewer button:has(svg.lucide-chevron-right)"
+   },
+   "as": "card_next"
+  },
+  {
+   "do": "pause",
+   "ms": 900
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "#content-viewer [class*=\"flipCardInner\"]"
+   },
+   "as": "card",
+   "mark": "card_flip2"
+  },
+  {
+   "do": "pause",
+   "ms": 1600
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has-text(\"The Electron Transport Chain\")"
+   },
+   "as": "sidebar",
+   "mark": "subnode2"
+  },
+  {
+   "do": "pause",
+   "ms": 1800
+  },
+  {
+   "do": "scroll",
+   "dy": 380,
+   "ms": 1200
+  },
+  {
+   "do": "pause",
+   "ms": 1000
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has-text(\"Fixing Carbon\")"
+   },
+   "as": "sidebar",
+   "mark": "node2"
+  },
+  {
+   "do": "pause",
+   "ms": 150
+  },
+  {
+   "do": "wait",
+   "for": {
+    "css": "#content-viewer >> text=\"2.1 \u2013 The Calvin Cycle\""
+   },
+   "cut": true,
+   "settle": 900
+  },
+  {
+   "do": "pause",
+   "ms": 1400
+  },
+  {
+   "do": "scroll",
+   "dy": 420,
+   "ms": 1300
+  },
+  {
+   "do": "pause",
+   "ms": 1300
+  },
+  {
+   "do": "scroll",
+   "dy": 320,
+   "ms": 1100
+  },
+  {
+   "do": "pause",
+   "ms": 1600
+  },
+  {
+   "do": "click",
+   "target": {
+    "css": "button:has-text(\"ATP and NADPH Accounting\")"
+   },
+   "as": "sidebar",
+   "mark": "subnode4"
+  },
+  {
+   "do": "pause",
+   "ms": 150
+  },
+  {
+   "do": "wait",
+   "for": {
+    "css": "#content-viewer >> text=\"2.2 \u2013 ATP and NADPH Accounting\""
+   },
+   "cut": true,
+   "settle": 900
+  },
+  {
+   "do": "pause",
+   "ms": 1200
+  },
+  {
+   "do": "scroll",
+   "dy": 360,
+   "ms": 1200
+  },
+  {
+   "do": "pause",
+   "ms": 1700
+  }
+ ]
+}
