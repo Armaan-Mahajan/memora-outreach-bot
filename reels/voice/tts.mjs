@@ -13,13 +13,32 @@ if (!process.env.ELEVENLABS_API_KEY && fs.existsSync(new URL('./.env', import.me
 const KEY = process.env.ELEVENLABS_API_KEY;
 if (!KEY) { console.error('No ELEVENLABS_API_KEY: put it in reel-lab/.env (see the comment at the top).'); process.exit(1); }
 const script = JSON.parse(fs.readFileSync(process.argv[2] || 'vo-script.json', 'utf8'));
-const API = 'https://api.elevenlabs.io/v1';
+const API = process.env.ELEVENLABS_API_BASE || 'https://api.elevenlabs.io/v1';   // override only for tests
+// Temporary failures (network drop, 429 rate limit, 5xx) are retried up to 3 times with 5 s / 15 s pauses
+// (1 s with RETRY_FAST); each retry is appended to RETRY_LOG so the run report shows it. Other errors fall through.
+process.on('uncaughtException', e => { console.error(`stopping: ${e.message}`); process.exit(1); });
+const sleep = ms => new Promise(r => setTimeout(r, process.env.RETRY_FAST ? 1000 : ms));
+const note = msg => { console.log(`  retry: ${msg}`); if (process.env.RETRY_LOG) fs.appendFileSync(process.env.RETRY_LOG, `voiceover ${script.name}: ${msg}\n`); };
+async function call(url, opts, label) {
+  for (let attempt = 1; ; attempt++) {
+    let r = null, why;
+    try { r = await fetch(url, opts); why = r.status; } catch (e) { why = `network error (${e.cause?.code || e.message})`; }
+    const temporary = !r || r.status === 429 || r.status >= 500;
+    if (!temporary || attempt === 3) {
+      if (attempt > 1) note(`${label}: ${r && r.ok ? `succeeded on attempt ${attempt} of 3` : `still failing after 3 attempts (${why})`}`);
+      if (!r) throw new Error(`${label}: ${why}`);
+      return r;
+    }
+    console.log(`  ${label}: ${why}, retrying (attempt ${attempt} of 3)`);
+    await sleep(attempt === 1 ? 5000 : 15000);
+  }
+}
 const H = { 'xi-api-key': KEY, 'content-type': 'application/json' };
 
 // Resolve the voice: use the given id; if it doesn't exist, look it up by name among your voices.
 async function resolveVoice() {
-  if (script.voice_id) { const r = await fetch(`${API}/voices/${script.voice_id}`, { headers: H }); if (r.ok) return script.voice_id; }
-  const r = await fetch(`${API}/voices`, { headers: H });
+  if (script.voice_id) { const r = await call(`${API}/voices/${script.voice_id}`, { headers: H }, 'voice lookup'); if (r.ok) return script.voice_id; }
+  const r = await call(`${API}/voices`, { headers: H }, 'voice list');
   if (!r.ok) throw new Error(`voice lookup failed: ${r.status} ${await r.text()}`);
   const v = (await r.json()).voices.find(v => v.name.toLowerCase().startsWith(script.voice_name.toLowerCase()));
   if (!v) throw new Error(`no voice named ${script.voice_name} in your account`);
@@ -33,9 +52,9 @@ let chars = 0;
 for (const [i, line] of script.lines.entries()) {
   let done = false;
   for (const model of script.models) {            // first model that works wins
-    const r = await fetch(`${API}/text-to-speech/${voiceId}/with-timestamps?output_format=mp3_44100_128`, {
+    const r = await call(`${API}/text-to-speech/${voiceId}/with-timestamps?output_format=mp3_44100_128`, {
       method: 'POST', headers: H,
-      body: JSON.stringify({ text: line.text, model_id: model, voice_settings: script.voice_settings }) });
+      body: JSON.stringify({ text: line.text, model_id: model, voice_settings: script.voice_settings }) }, `line ${i + 1} (${model})`);
     if (!r.ok) { console.log(`  line ${i + 1}: ${model} → ${r.status} ${(await r.text()).slice(0, 160)}`); continue; }
     const j = await r.json();
     fs.writeFileSync(`${out}/line-${i + 1}.mp3`, Buffer.from(j.audio_base64, 'base64'));

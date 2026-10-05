@@ -17,10 +17,18 @@ These four reels, defined in `reels/config.json`, are delivered as MP4s in this 
 
 Nothing goes to the outreach dashboard, to Supabase storage, or to Instagram. Armaan reviews the reels in chat and picks which ones move on.
 
+## Retrying temporary failures
+
+Most nights nobody is awake to re-run a failed run, so temporary failures are retried a **fixed, small** number of times. Everything else still stops the run.
+
+- **Your two Supabase calls** (stage 0's `get_project`, stage 2's Vault `select`): if a call fails with a *connection* problem, run `sleep 60` and try the same call again. If it fails again, `sleep 180` and try once more. Three attempts in total, then stop and report. A connection problem means the error mentions a timeout, "connection terminated", a reset or refused connection, "fetch failed", or a 5xx / 503 status. Any other error stops the run at once and is never retried: a permission or authorization error, a refusal, a paused project, or fewer than three secrets returned.
+- **Inside `run.sh`** (you do nothing): the memora-web clone, package installs, the demo-account reset, each recording, each ElevenLabs call and each render retry themselves a bounded number of times. A failure before recording starts also gets **one** whole-run restart after 15 minutes. During that wait `status.json` shows `"state": "running"` with a message starting "waiting … before retrying the whole run". That's expected, so keep waiting. A bad token or wrong password is never retried.
+- **Every retry gets reported**, yours and `run.sh`'s. See stage 5 and stage 6.
+
 ## Stages
 
 ### 0. Check the Supabase project is awake
-Use the Supabase MCP `get_project` for `dtyiuknezuzqohdxicbg` (memora-outreach). If its status is anything other than `ACTIVE_HEALTHY`, stop and report: "memora-outreach is paused — restore it in the Supabase dashboard, then re-run." Do **not** restore it yourself.
+Use the Supabase MCP `get_project` for `dtyiuknezuzqohdxicbg` (memora-outreach). On a connection problem, retry as described above. If its status is anything other than `ACTIVE_HEALTHY`, stop and report: "memora-outreach is paused — restore it in the Supabase dashboard, then re-run." Do **not** restore it yourself.
 
 ### 1. Get the code
 ```bash
@@ -35,7 +43,7 @@ select name, decrypted_secret from vault.decrypted_secrets where name in ('demo_
 ```
 Write them to `~/.reels-secrets.env` as `DEMO_PASSWORD=…`, `ELEVENLABS_API_KEY=…` and `MEMORA_WEB_TOKEN=…`, one per line, using the file-writing tool. Then run `chmod 600 ~/.reels-secrets.env`.
 
-**Never** print, echo, cat, log or repeat any of these values: not in a message, a command, a file inside a repo, or your final report. If the Vault read is refused or returns fewer than three rows, stop and report that. Do not look for the secrets anywhere else.
+**Never** print, echo, cat, log or repeat any of these values: not in a message, a command, a file inside a repo, or your final report. If the read fails with a connection problem, retry it as described above. If it's refused or returns fewer than three rows, stop and report that; don't retry. Do not look for the secrets anywhere else.
 
 ### 3. Start the run in the background
 `run.sh` takes about 90 minutes, which is longer than a single shell call can wait. Start it detached, then delete the secrets file once the run has picked the secrets up:
@@ -63,15 +71,16 @@ Do not read `run.log` while the run is going well. It's long, and reading it was
    This is a check, not a fix. Never re-render or re-record.
 2. Read `~/reels-run/out/summary.json`. It holds each reel's length, size and audio check.
 3. Send the four MP4s with `SendUserFile` in a single call, `status: proactive`, `display: render`.
-4. Finish with a short report: one line per reel with its length and OK or FLAGGED (plus what you saw if flagged), the total run time, and the `hardware` line from `summary.json` (cores, CPU model, RAM). That's how we track what the scheduled container gets. Don't send the contact sheets unless a reel was flagged.
+4. Finish with a short report: one line per reel with its length and OK or FLAGGED (plus what you saw if flagged), the total run time, and the `hardware` line from `summary.json` (cores, CPU model, RAM). That's how we track what the scheduled container gets. Then list every retry: your own Supabase retries from stages 0 and 2, plus each entry in `summary.json`'s `retries` (with `run_attempt` if it's 2). If there were none, say "no retries". Don't send the contact sheets unless a reel was flagged.
 
 ### 6. On failure
 Report:
 - the `stage` and `message` from `status.json`
 - the last 30 lines of `~/reels-run/run.log` (`tail -n 30 ~/reels-run/run.log`)
 - the last 15 lines of `~/reels-run/next.log` if the stage was `servers`, `seed` or `capture:*`
+- every retry that happened: your own Supabase retries, plus `cat ~/reels-run/retries.txt`
 
-Send any reels that did finish rendering (`~/reels-run/out/*.mp4`), saying which ones are missing. **Do not re-run, patch scripts, or work around the failure.**
+Send any reels that did finish rendering (`~/reels-run/out/*.mp4`), saying which ones are missing. **Do not re-run, patch scripts, or work around the failure.** `run.sh` has already used its retries by the time it reports failure.
 
 ## Hard limits
 - Never edit, commit or push any repository. The clones are read-only working copies.
@@ -86,4 +95,5 @@ Send any reels that did finish rendering (`~/reels-run/out/*.mp4`), saying which
   - `rm -f ~/.reels-secrets.env`
 
   No curl, no wget, no package installs, no `python3 -c`, and no running the pipeline's scripts individually.
+- Retries: only the ones described in "Retrying temporary failures". Never retry anything else, and never run `run.sh` a second time yourself.
 - If anything happens that this runbook doesn't cover, stop and report it. Posting nothing is better than posting something wrong.

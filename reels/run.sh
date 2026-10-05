@@ -5,7 +5,10 @@
 #
 # Stages: preflight → memora-web (clone/build) → servers → seed → capture ×4 → voice ×4 → assemble → render ×4 → verify
 # Output: $WORK/out/*.mp4 + $WORK/out/summary.json.  Progress: $WORK/status.json (stage, state, message) and $WORK/run.log.
-# Any failure stops the whole run and leaves status.json = {"state":"failed","stage":…,"message":…}. It never retries or improvises.
+# Temporary failures (network, timeouts, rate limits, a crashed browser) get a bounded number of retries, and every retry is
+# recorded in $WORK/retries.txt and summary.json. A failure before recording starts (memora-web / servers / seed) also gets
+# ONE whole-run restart after RETRY_WAIT_RUN seconds (default 900). Everything else (bad credentials, a voiceover that
+# doesn't fit, a failed output check) stops the run at once and leaves status.json = {"state":"failed",…}. It never improvises.
 #
 # Optional env:
 #   WORK        where everything is built (default ~/reels-run). Must be outside the outreach-bot clone.
@@ -13,14 +16,19 @@
 #               Sent as a one-off HTTP Basic header via GIT_CONFIG_* env vars, never written to .git/config or disk.
 #   MEMORA_WEB  path to an existing memora-web clone to reuse (it is fetched and switched to the demo branch).
 #   ONLY        space-separated reel names to run a subset, e.g. ONLY="quiz-full".
+#   RETRY_FAST  testing only: any value shortens every retry pause to 1 s.
+#   CAPTURE_TIMEOUT  seconds one reel recording may take before it counts as stuck (default 1200).
 set -Eeuo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK="${WORK:-$HOME/reels-run}"
 mkdir -p "$WORK/out"
-LOG="$WORK/run.log"; : > "$LOG"
+export RUN_ATTEMPT="${RUN_ATTEMPT:-1}"; RETRY_WAIT_RUN="${RETRY_WAIT_RUN:-900}"
+LOG="$WORK/run.log"; export RETRY_LOG="$WORK/retries.txt"
+if [ "$RUN_ATTEMPT" = 1 ]; then : > "$LOG"; : > "$RETRY_LOG"; else echo "=== whole-run attempt $RUN_ATTEMPT" >> "$LOG"; fi
 STAGE="start"
 PIDS=()
+PERMANENT=""          # set when a failure is clearly not temporary (bad credentials): no retries, no restart
 
 status() { python3 - "$WORK/status.json" "$STAGE" "$1" "${2:-}" <<'EOF'
 import json, sys, time
@@ -29,7 +37,30 @@ json.dump({"stage": stage, "state": state, "message": msg, "at": time.strftime("
 EOF
 }
 stage() { STAGE="$1"; echo "=== [$(date -u +%H:%M:%S)] $1" | tee -a "$LOG"; status running "$1"; }
-fail() { status failed "$1"; echo "FAILED at stage '$STAGE': $1" | tee -a "$LOG"; exit 1; }
+note() { echo "$1" >> "$RETRY_LOG"; echo "  retry: $1" | tee -a "$LOG"; }
+pause() { sleep "$( [ -n "${RETRY_FAST:-}" ] && echo 1 || echo "$1")"; }
+fail() {
+  # one whole-run restart for a failure before recording starts, unless it's clearly not temporary
+  case "$STAGE" in memora-web|servers|seed)
+    if [ "$RUN_ATTEMPT" = 1 ] && [ -z "$PERMANENT" ]; then
+      note "whole run: stage '$STAGE' failed ($1), restarting from the top in ${RETRY_WAIT_RUN}s (attempt 2 of 2)"
+      status running "waiting ${RETRY_WAIT_RUN}s before retrying the whole run ('$STAGE' failed: $1)"
+      cleanup; trap - EXIT ERR; pause "$RETRY_WAIT_RUN"
+      exec env RUN_ATTEMPT=2 MEMORA_WEB_TOKEN="${_MWT:-}" bash "$HERE/run.sh"
+    fi;; esac
+  status failed "$1"; echo "FAILED at stage '$STAGE': $1" | tee -a "$LOG"; exit 1; }
+# retry <tries> <pause_s> <label> <command…>: for temporary failures only. A command returning 2 means "not temporary": stop retrying.
+ATTEMPT=1
+retry() { local n=$1 p=$2 label=$3 i rc; shift 3
+  for ((i = 1; i <= n; i++)); do
+    ATTEMPT=$i
+    if "$@"; then [ "$i" -gt 1 ] && note "$label: succeeded on attempt $i of $n"; return 0; else rc=$?; fi
+    [ "$rc" = 2 ] && { PERMANENT=1; return 1; }
+    if [ "$i" -lt "$n" ]; then echo "  $label failed (attempt $i of $n), retrying in ${p}s" | tee -a "$LOG"; pause "$p"; fi
+  done
+  note "$label: failed after $n attempts"; return 1; }
+# git/seed output that means bad credentials, not a flaky network
+AUTH_ERR='Authentication failed|could not read Username|returned error: 40[13]|Invalid login credentials|invalid_grant'
 cleanup() { for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null || true; done
   pkill -f "[n]ext start -p 3001" 2>/dev/null || true; pkill -f "[n]ode vproxy.cjs" 2>/dev/null || true; }
 trap 'status failed "command failed (line $LINENO) — see run.log"; echo "FAILED at stage $STAGE (line $LINENO)" >> "$LOG"' ERR
@@ -64,13 +95,14 @@ if [ -n "${MEMORA_WEB_TOKEN:-}" ]; then        # auth for this stage's git calls
   export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
          GIT_CONFIG_VALUE_0="Authorization: Basic $(printf 'x-access-token:%s' "$MEMORA_WEB_TOKEN" | base64 | tr -d '\n')"
 fi
-if [ -d "$MW/.git" ]; then
-  git -C "$MW" fetch --quiet origin "$BRANCH" >>"$LOG" 2>&1 || fail "could not fetch memora-web ($BRANCH) — token missing or expired?"
-  git -C "$MW" checkout --quiet -B "$BRANCH" "origin/$BRANCH" >>"$LOG" 2>&1
-else
-  git clone --quiet --depth 1 --branch "$BRANCH" "$(cfg "c['memora_web']['repo']")" "$MW" >>"$LOG" 2>&1 \
-    || fail "could not clone memora-web ($BRANCH) — is MEMORA_WEB_TOKEN set, unexpired, and scoped to memora-web (Contents: read)?"
-fi
+MW_REPO=$(cfg "c['memora_web']['repo']")
+mw_get() { local out; out=$(mktemp)
+  if [ -d "$MW/.git" ]; then git -C "$MW" fetch --quiet origin "$BRANCH" >"$out" 2>&1 && git -C "$MW" checkout --quiet -B "$BRANCH" "origin/$BRANCH" >>"$out" 2>&1
+  else case "$MW" in "$WORK"/*) rm -rf "$MW";; esac; git clone --quiet --depth 1 --branch "$BRANCH" "$MW_REPO" "$MW" >"$out" 2>&1; fi
+  local rc=$?; cat "$out" >> "$LOG"; grep -qE "$AUTH_ERR" "$out" && rc=2; rm -f "$out"; return $rc; }
+retry 3 20 "memora-web clone" mw_get \
+  || fail "could not get memora-web ($BRANCH) — $( [ -n "$PERMANENT" ] && echo 'GitHub refused the token: is MEMORA_WEB_TOKEN set, unexpired, and scoped to memora-web (Contents: read)?' || echo 'network problem, see run.log')"
+_MWT="${MEMORA_WEB_TOKEN:-}"     # kept unexported (no child process sees it) only for the one whole-run restart
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 MEMORA_WEB_TOKEN
 echo "memora-web at $(git -C "$MW" rev-parse --short HEAD)" | tee -a "$LOG"
 grep -q "process.env.DEMO_PASSWORD" "$MW/scripts/seed-demo-content.ts" \
@@ -80,12 +112,13 @@ import json, sys
 env = json.load(open("$HERE/config.json"))["public_env"]
 open(sys.argv[1], "w").write("".join(f'{k}="{v}"\n' for k, v in env.items()))
 EOF
-(cd "$MW" && npm ci --no-audit --no-fund >>"$LOG" 2>&1) || fail "npm ci failed in memora-web"
+npm_ci() { (cd "$1" && npm ci --no-audit --no-fund >>"$LOG" 2>&1); }
+retry 3 20 "npm ci (memora-web)" npm_ci "$MW" || fail "npm ci failed in memora-web"
 (cd "$MW" && npx next build >>"$LOG" 2>&1) || fail "next build failed"
 
 # ── 3. servers: next on :3001, time-dilation proxy on :3000 ────────────────────
 stage servers
-(cd "$HERE/capture" && npm ci --no-audit --no-fund >>"$LOG" 2>&1) || fail "npm ci failed in capture/"
+retry 3 20 "npm ci (capture)" npm_ci "$HERE/capture" || fail "npm ci failed in capture/"
 (cd "$MW" && exec npx next start -p 3001 >>"$WORK/next.log" 2>&1) & PIDS+=($!)
 (cd "$HERE/capture" && exec node vproxy.cjs >>"$WORK/vproxy.log" 2>&1) & PIDS+=($!)
 ok=""
@@ -97,14 +130,21 @@ done
 
 # ── 4. reset the demo account to its baseline ──────────────────────────────────
 stage seed
-(cd "$MW" && set -a && . ./.env.local && set +a && npm run -s seed:demo >>"$LOG" 2>&1) || fail "seed:demo failed (wrong DEMO_PASSWORD?)"
+seed() { local out; out=$(mktemp)
+  (cd "$MW" && set -a && . ./.env.local && set +a && npm run -s seed:demo >"$out" 2>&1); local rc=$?
+  cat "$out" >> "$LOG"; grep -qE "$AUTH_ERR" "$out" && rc=2; rm -f "$out"; return $rc; }
+retry 2 30 "seed" seed \
+  || fail "seed:demo failed — $( [ -n "$PERMANENT" ] && echo 'login refused: is DEMO_PASSWORD (Vault demo_password) correct?' || echo 'see run.log')"
 
 # ── 5. capture ─────────────────────────────────────────────────────────────────
 for r in $REELS; do
   stage "capture:$r"
-  (cd "$HERE/capture" && timeout 1200 node runner.mjs "$HERE/$(rcfg "$r" capture)" >>"$LOG" 2>&1) || fail "recording failed"
+  # a retry re-seeds first, so the half-finished attempt's course/quiz/deck doesn't show up in the next try's library
+  capture() { [ "$ATTEMPT" -gt 1 ] && { seed || return 1; }
+    rm -rf "$HERE/capture/out/$1"
+    (cd "$HERE/capture" && timeout "${CAPTURE_TIMEOUT:-1200}" node runner.mjs "$HERE/$(rcfg "$1" capture)" >>"$LOG" 2>&1) && [ -s "$HERE/capture/out/$1/clip.mp4" ]; }
+  retry 2 15 "recording $r" capture "$r" || fail "recording failed"
   clip="$HERE/capture/out/$r/clip.mp4"
-  [ -s "$clip" ] || fail "no clip produced"
   d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$clip"); echo "  $r: ${d}s" | tee -a "$LOG"
 done
 
@@ -117,7 +157,7 @@ done
 # ── 7. assemble: footage + events + placed voiceover into the Remotion project ─
 stage assemble
 RM="$HERE/remotion"
-(cd "$RM" && npm ci --no-audit --no-fund >>"$LOG" 2>&1) || fail "npm ci failed in remotion/"
+retry 3 20 "npm ci (remotion)" npm_ci "$RM" || fail "npm ci failed in remotion/"
 (cd "$RM" && python3 tools/synth_audio.py >>"$LOG" 2>&1) || fail "synth_audio.py failed"
 for r in $REELS; do
   f=$(rcfg "$r" footage); vo_name=$(python3 -c "import json; print(json.load(open('$HERE/$(rcfg "$r" vo)'))['name'])")
@@ -133,8 +173,9 @@ done
 for r in $REELS; do
   stage "render:$r"
   comp=$(rcfg "$r" composition); out="$WORK/out/$(rcfg "$r" output)"
-  (cd "$RM" && npx remotion render src/index.ts "$comp" "$WORK/render-$r.mp4" --concurrency="$RENDER_CONC" --log=error \
-      --browser-executable="$CHROME_SHELL" >>"$LOG" 2>&1) || fail "remotion render failed"
+  render() { rm -f "$WORK/render-$1.mp4"; (cd "$RM" && npx remotion render src/index.ts "$comp" "$WORK/render-$1.mp4" --concurrency="$RENDER_CONC" --log=error \
+      --browser-executable="$CHROME_SHELL" >>"$LOG" 2>&1) && [ -s "$WORK/render-$1.mp4" ]; }
+  retry 2 15 "render $r" render "$r" || fail "remotion render failed"
   ffmpeg -y -loglevel error -i "$WORK/render-$r.mp4" -c:v copy -af loudnorm=I=-15:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k "$out" \
     || fail "loudness pass failed"
   rm -f "$WORK/render-$r.mp4"
@@ -158,7 +199,9 @@ for r in (r for r in cfg["reels"] if r["name"] in names):
     print(f"  {'OK ' if ok else 'BAD'} {r['output']}: {d:.1f}s (target {lo}-{hi}), {wh}, audio={aud}")
     if not ok: bad.append(r["name"])
 import os
-json.dump({"hardware": os.environ.get("HW", "unknown"), "reels": rows}, open(f"{out}/summary.json", "w"), indent=1)
+rl = os.environ.get("RETRY_LOG"); retries = [l.strip() for l in open(rl)] if rl and os.path.exists(rl) else []
+json.dump({"hardware": os.environ.get("HW", "unknown"), "run_attempt": int(os.environ.get("RUN_ATTEMPT", "1")),
+           "retries": retries, "reels": rows}, open(f"{out}/summary.json", "w"), indent=1)
 sys.exit(1 if bad else 0)
 EOF
 # contact sheets (8 evenly spaced frames per reel) for the run's own visual check
