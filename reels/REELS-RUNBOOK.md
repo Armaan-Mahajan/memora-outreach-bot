@@ -1,99 +1,128 @@
 # Reels RUNBOOK — one scheduled cloud run
 
-This is the complete brief for a scheduled cloud session that produces Memora's Instagram Reels. Read it in full before doing anything.
+This is the complete brief for a scheduled cloud session that produces Memora's Instagram Reels. Read it in full, then read
+`reels/APP-MAP.md` and `reels/KIT.md`, before doing anything.
 
-The run is **deterministic**. `reels/run.sh` does all the work: it records the demo app, generates the voiceover, renders and checks the output. Your job is to start it, wait, look at what it made, and deliver it. You make no creative decisions in this run, and you never fix things by improvising. If something goes wrong, stop and report.
+**You are the planner.** Each reel is planned by you, at run time: what to show, in what order, what the voice says, how the edit
+looks. `reels/plan.sh` does the mechanical work (recording the real demo app, voice, checking, rendering) and refuses anything
+outside the rules. There are no templates: two reels of the same type should not look like the same reel with the words swapped.
+
+Creative freedom stops at facts and safety. Every claim must be true of the product and visible in the reel. If something goes
+wrong that this runbook doesn't cover, stop and report. Posting nothing is better than posting something wrong.
 
 ## What a run produces
+**N reels** (default **3**; the scheduled prompt may set another number and mix), delivered as MP4s in this session's chat for
+Armaan to review. Nothing goes to the outreach dashboard, Supabase storage or Instagram.
 
-These four reels, defined in `reels/config.json`, are delivered as MP4s in this session's chat for Armaan to review:
+## Reel types
+Each has requirements; everything else is yours to decide. Vary format, pacing, scene design, hook and angle between reels and
+between runs.
 
-| Reel | File | Target length |
+| Type (`feature`) | Must show | Start URL |
 |---|---|---|
-| Agent: course | `memora-reel-agent-course.mp4` | 30–45 s |
-| Agent: lesson walkthrough | `memora-reel-agent-lesson.mp4` | 45–60 s |
-| Quiz | `memora-reel-quiz.mp4` | 20–30 s |
-| Flashcards | `memora-reel-flashcards.mp4` | 20–30 s |
+| `agent` | Memora Agent turning one prompt into a whole structured course (outline → build → reading it). The standout, "only on Memora" feature. A reel may focus on the build or on one lesson. | `/agent` |
+| `quiz` | Generating a quiz from a prompt and taking part of it (answering, explanations). | `/quizzes` |
+| `flashcards` | Generating a deck from a prompt and studying it. | `/flashcards` |
+| `autopilot` | Memora Autopilot: exams in, a daily plan out. Pick your own angle each time: the exam board and readiness, a study session, what "secure" means, study-time controls… Plan it fresh; never reuse a previous run's sequence. | `/autopilot` or `/dashboard` |
+| `overview` | The landing page and the dashboard. Example flow (not mandatory): scroll the lander to its final panel while interacting with its elements (week chart, flip card) and explaining each section, click "Go to Dashboard", explore, end on one feature worth a closer look. Vary which sections get airtime and what you end on. | `/` or `/dashboard` |
+| `adaptive` | An adaptive deck (or quiz) run: fast-forward through answering — the voice speaks as the student doing it ("let me just fast-forward through these…") — then the results screen, then the rebuild showing how the deck adapts (retired / reworded / new). | `/autopilot`, `/flashcards/decks`, `/quizzes` or `/dashboard` |
 
-Nothing goes to the outreach dashboard, to Supabase storage, or to Instagram. Armaan reviews the reels in chat and picks which ones move on.
+Topics: `agent`, `quiz` and `flashcards` reels take their topic from `topics.json` (below) and bring matching `content/`.
+`autopilot`, `overview` and `adaptive` show seeded content (Forces and Motion, Photosynthesis); their voice talks about what's on screen.
+
+## Voices
+ElevenLabs, model `eleven_v4`, from the roster in `reels/config.json`. One voice per reel, rotating: reel *i* (in slug order)
+gets roster entry `(day_of_year + i) mod 4`. Write lines that suit the voice: Justin Case is calm and explanatory; Belle B and
+Lucan Rock are excited; Lyan is somewhere between.
+
+## Content rules (non-negotiable)
+Audience is 13–18. Sharp peer talking to another student, not SaaS copy. No user or scale counts, no manufactured urgency or
+streak guilt, no claims that aren't visible in the reel or true of the product, no curriculum names inside generated content.
+Memora is in beta: confident, never implying more scale or polish than exists. Each reel ends on the-memora.com.
 
 ## Retrying temporary failures
-
-Most nights nobody is awake to re-run a failed run, so temporary failures are retried a **fixed, small** number of times. Everything else still stops the run.
-
-- **Your two Supabase calls** (stage 0's `get_project`, stage 2's Vault `select`): if a call fails with a *connection* problem, run `sleep 60` and try the same call again. If it fails again, `sleep 180` and try once more. Three attempts in total, then stop and report. A connection problem means the error mentions a timeout, "connection terminated", a reset or refused connection, "fetch failed", or a 5xx / 503 status. Any other error stops the run at once and is never retried: a permission or authorization error, a refusal, a paused project, or fewer than three secrets returned.
-- **Inside `run.sh`** (you do nothing): the memora-web clone, package installs, the demo-account reset, each recording, each ElevenLabs call and each render retry themselves a bounded number of times. A failure before recording starts also gets **one** whole-run restart after 15 minutes. During that wait `status.json` shows `"state": "running"` with a message starting "waiting … before retrying the whole run". That's expected, so keep waiting. A bad token or wrong password is never retried.
-- **Every retry gets reported**, yours and `run.sh`'s. See stage 5 and stage 6.
+- **Your two Supabase calls** (stage 0 `get_project`, stage 2 Vault `select`): on a *connection* problem (timeout, "connection
+  terminated", reset/refused, "fetch failed", 5xx), `sleep 60` and retry, then `sleep 180` and retry once more. Any other error
+  stops the run: permission errors, refusals, a paused project, fewer than three secrets.
+- **Inside `plan.sh`**: clone, installs, demo reset, recordings, TTS and renders retry themselves a bounded number of times;
+  `prepare` restarts itself once after 15 minutes if it fails before recording. Bad credentials are never retried.
+- **Your repairs** (stage 7) are bounded: at most **3** fix attempts per reel. Then drop it.
 
 ## Stages
 
 ### 0. Check the Supabase project is awake
-Use the Supabase MCP `get_project` for `dtyiuknezuzqohdxicbg` (memora-outreach). On a connection problem, retry as described above. If its status is anything other than `ACTIVE_HEALTHY`, stop and report: "memora-outreach is paused — restore it in the Supabase dashboard, then re-run." Do **not** restore it yourself.
+Supabase MCP `get_project` for `dtyiuknezuzqohdxicbg` (memora-outreach). If not `ACTIVE_HEALTHY`, stop and report
+"memora-outreach is paused — restore it in the Supabase dashboard, then re-run." Never restore it yourself.
 
 ### 1. Get the code
 ```bash
 git clone --depth 1 https://github.com/Armaan-Mahajan/memora-outreach-bot.git ~/ob
 ```
-memora-web is **private**, and a scheduled session has no GitHub access to it. You do **not** clone it yourself: `run.sh` clones the `demo-recording-mode-v2` branch using the read-only token from stage 2 (`MEMORA_WEB_TOKEN`). If the clone fails, the run stops at the `memora-web` stage. Report that and stop; don't try other credentials, URLs or tools.
+memora-web is private: `plan.sh prepare` clones it with the read-only token. Never clone it yourself or try other credentials.
 
 ### 2. Secrets
-Read the three secrets with the Supabase MCP `execute_sql` on `dtyiuknezuzqohdxicbg`:
 ```sql
 select name, decrypted_secret from vault.decrypted_secrets where name in ('demo_password', 'elevenlabs_api_key', 'memora_web_read_token');
 ```
-Write them to `~/.reels-secrets.env` as `DEMO_PASSWORD=…`, `ELEVENLABS_API_KEY=…` and `MEMORA_WEB_TOKEN=…`, one per line, using the file-writing tool. Then run `chmod 600 ~/.reels-secrets.env`.
+Write `~/.reels-secrets.env` (`DEMO_PASSWORD=…`, `ELEVENLABS_API_KEY=…`, `MEMORA_WEB_TOKEN=…`) with the file-writing tool, then
+`chmod 600`. **Never** print, echo, log or repeat these values anywhere. Delete the file at the end of the run (stage 9) or on failure.
 
-**Never** print, echo, cat, log or repeat any of these values: not in a message, a command, a file inside a repo, or your final report. If the read fails with a connection problem, retry it as described above. If it's refused or returns fewer than three rows, stop and report that; don't retry. Do not look for the secrets anywhere else.
+### 3. Plan the reels
+1. Decide the N reels and their types (the scheduled prompt's mix, else 3 with at least two different types).
+2. For topic-led reels pick topics from `topics.json` → `topics`: alternate `level` `upper` / `younger` (`both` fits either), skip
+   `archetype: technique`, prefer subjects not used by the other reels tonight.
+3. Write each plan in `~/reels-run/plans/<slug>/` following KIT.md. Read the working scripts in `reels/capture/reels/*.json` and
+   APP-MAP.md before writing any `capture.json`; use only selectors APP-MAP.md lists or a working script uses.
+4. For content you wrote (`content/*.json`, voice lines, on-screen copy), get a fact-check: spawn one subagent per run with the
+   plans' text and ask it to flag anything factually wrong for the stated level. Fix what it flags.
+5. `bash ~/ob/reels/plan.sh validate <slug>` for each. Fix until every plan passes.
 
-### 3. Start the run in the background
-`run.sh` takes about 90 minutes, which is longer than a single shell call can wait. Start it detached, then delete the secrets file once the run has picked the secrets up:
+### 4. Record (background)
 ```bash
-cd ~ && (set -a; . ~/.reels-secrets.env; set +a; WORK=~/reels-run nohup bash ~/ob/reels/run.sh > ~/reels-console.log 2>&1 &)
-sleep 20 && rm -f ~/.reels-secrets.env && cat ~/reels-run/status.json
+cd ~ && (set -a; . ~/.reels-secrets.env; set +a; WORK=~/reels-run nohup bash ~/ob/reels/plan.sh prepare > ~/reels-console.log 2>&1 &)
 ```
+Then every 8 minutes: `sleep 480; cat ~/reels-run/status.json`. It builds the app (≈10 min), then per reel: content → reset →
+record → voice. Recording runs roughly 8–10× slower than the clip. `"state": "done"` → stage 5. `"failed"` → stage 8.
+No change for 40 minutes → treat as failed ("stalled at <stage>").
 
-### 4. Wait
-Every 8 minutes, run `sleep 480; cat ~/reels-run/status.json`. That's one check per shell call, and nothing else in between.
-- `"state": "running"`: keep waiting. The stage names show progress: preflight → memora-web → servers → seed → capture:<reel> ×4 → voice:<reel> ×4 → assemble → render:<reel> ×4 → verify.
-- `"state": "failed"`: go to stage 6.
-- `"state": "done"`: go to stage 5.
-- If the status hasn't changed for **40 minutes**, treat the run as failed with the message "stalled at <stage>".
+### 5. Check each reel
+For each slug that wasn't dropped (`ls ~/reels-run/dropped-*.txt` lists dropped ones with reasons):
+`bash ~/ob/reels/plan.sh check <slug>`. It fits the voice to the real recording, type-checks, and renders stills to
+`~/reels-run/check/<slug>/`. On failure read `error.txt`.
 
-Do not read `run.log` while the run is going well. It's long, and reading it wastes the run's budget.
+### 6. Look
+Read `check/<slug>/sheet.jpg` (and individual `seg-*.jpg` where needed). Flag: an error page, login screen, blank or white window,
+404, a stuck spinner, wrong content, text outside the safe area or overlapping, captions missing where the voice speaks, a scene
+that says something the footage doesn't show.
 
-### 5. Look, then deliver
-1. Read each `~/reels-run/out/<reel>-sheet.jpg`. Each is a contact sheet of 8 frames from that reel. Flag a reel if any frame shows:
-   - an error page, a login screen, or a blank or white app window
-   - a 404, or a stuck loading spinner covering most of the window
-   - text from the wrong reel
-   - captions that are missing where a voice line should be playing
+### 7. Repair (≤ 3 attempts per reel)
+| Problem | Fix, then |
+|---|---|
+| Reel code / scene design / timeline / voice timing | edit `Reel.tsx` / `plan.json` → `check` |
+| Voice script or voice changed | edit `plan.json` → `plan.sh voice <slug>` → `check` |
+| The recording is wrong (wrong page, missed step) | edit `capture.json` (+ `content/`) → `plan.sh record <slug>` (needs the secrets env, run it in the background like stage 4) → `check` |
+After 3 failed attempts, drop the reel: write the reason to `~/reels-run/dropped-<slug>.txt`.
 
-   This is a check, not a fix. Never re-render or re-record.
-2. Read `~/reels-run/out/summary.json`. It holds each reel's length, size and audio check.
-3. Send the four MP4s with `SendUserFile` in a single call, `status: proactive`, `display: render`.
-4. Finish with a short report: one line per reel with its length and OK or FLAGGED (plus what you saw if flagged), the total run time, and the `hardware` line from `summary.json` (cores, CPU model, RAM). That's how we track what the scheduled container gets. Then list every retry: your own Supabase retries from stages 0 and 2, plus each entry in `summary.json`'s `retries` (with `run_attempt` if it's 2). If there were none, say "no retries". Don't send the contact sheets unless a reel was flagged.
+### 8. Finish
+`bash ~/ob/reels/plan.sh finish` (renders every checked reel, loudness, verify; ≈5 min per reel — run it in the background like
+stage 4 if more than 3 reels). Then read each `~/reels-run/out/<slug>-sheet.jpg` once more and `out/summary.json`.
 
-### 6. On failure
-Report:
-- the `stage` and `message` from `status.json`
-- the last 30 lines of `~/reels-run/run.log` (`tail -n 30 ~/reels-run/run.log`)
-- the last 15 lines of `~/reels-run/next.log` if the stage was `servers`, `seed` or `capture:*`
-- every retry that happened: your own Supabase retries, plus `cat ~/reels-run/retries.txt`
+### 9. Deliver
+`rm -f ~/.reels-secrets.env`. Send all finished MP4s with `SendUserFile` in one call (`status: proactive`, `display: render`).
+Report: one line per reel — type, topic, voice, length, OK or FLAGGED (what you saw); dropped reels with reasons; total run time;
+the `hardware` line from summary.json; every retry (yours + summary.json `retries`, with `run_attempt` if 2), or "no retries".
 
-Send any reels that did finish rendering (`~/reels-run/out/*.mp4`), saying which ones are missing. **Do not re-run, patch scripts, or work around the failure.** `run.sh` has already used its retries by the time it reports failure.
+**Fallback.** If `prepare` fails outright (stage 4 → failed after its own restart), the fixed four-reel pipeline is the backup:
+`WORK=~/reels-fixed nohup bash ~/ob/reels/run.sh` started like stage 4 (with the secrets env), waited on the same way, its MP4s
+delivered from `~/reels-fixed/out/`. Say clearly in the report that the planned run failed and why. Use the fallback once, never
+more.
 
 ## Hard limits
-- Never edit, commit or push any repository. The clones are read-only working copies.
-- Database: the only SQL you run yourself is stage 0's `get_project` and stage 2's single Vault `select`. Nothing else, ever: no INSERT, UPDATE, DELETE or DDL. (`run.sh` resets the disposable demo account in memora-web's project through the app's own seed script; that's expected.)
-- Vault: read only `demo_password`, `elevenlabs_api_key` and `memora_web_read_token`.
-- Never print secrets (see stage 2). Delete `~/.reels-secrets.env` as soon as `run.sh` has started.
-- No posting anywhere: not Instagram, not the outreach dashboard, not Supabase storage.
-- Shell commands are limited to:
-  - `git clone` of the outreach-bot repo (memora-web is cloned by `run.sh`, never by you)
-  - `bash ~/ob/reels/run.sh`, started the way stage 3 shows
-  - `sleep`, `cat`, `tail`, `ls`, and `chmod 600` on the secrets file
-  - `rm -f ~/.reels-secrets.env`
-
-  No curl, no wget, no package installs, no `python3 -c`, and no running the pipeline's scripts individually.
-- Retries: only the ones described in "Retrying temporary failures". Never retry anything else, and never run `run.sh` a second time yourself.
-- If anything happens that this runbook doesn't cover, stop and report it. Posting nothing is better than posting something wrong.
+- Never edit, commit or push any repository. Your files live only in `~/reels-run/` (plans, checks).
+- Database: only stage 0's `get_project` and stage 2's single Vault `select`. No other SQL, ever.
+- Vault: read only `demo_password`, `elevenlabs_api_key`, `memora_web_read_token`. Never print secrets.
+- No posting anywhere: not Instagram, the outreach dashboard, or Supabase storage.
+- Shell: `git clone` of outreach-bot; `bash ~/ob/reels/plan.sh <phase> …` (and `run.sh` only as the fallback); `sleep`, `cat`,
+  `tail`, `ls`, `mkdir`; `chmod 600` / `rm -f` on the secrets file. No curl, wget, package installs, or running the pipeline's
+  inner scripts directly. Write plan files with the file tools.
+- The recording drives only the local demo app (`validate_capture.py` enforces it). Never point anything at the live site.

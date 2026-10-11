@@ -18,7 +18,11 @@ The reels are real product demos, not AI-generated video. Every frame of the app
 4. **Edit and render** (`reels/remotion/`). Remotion builds the 1080x1920 reel in React: `director.ts` turns the recorded events into camera moves and a cursor, and the app window sits in a branded frame. The picture always runs at least a second past the last word; if the voice runs long, the last frame is held.
 5. **Check and deliver.** Every output is checked for length, resolution and loudness (normalised to -15 LUFS), and a contact sheet of stills is looked at before anything is delivered. Finished MP4s land in the run's chat for me to review; nothing goes to Supabase, the dashboard or Instagram from this pipeline.
 
-`reels/run.sh` does all of the above; `reels/REELS-RUNBOOK.md` is the brief the scheduled session follows. The session's own job is small: check the Supabase project is up, read three secrets from Supabase Vault (demo password, ElevenLabs key, a read-only token for the private `memora-web` repo), start `run.sh`, wait, look at the output, and report.
+The scheduled session plans every reel itself. It picks the reel types and topics, then writes each reel's recording script, demo content, voiceover and Remotion scene code. No templates are involved. There are six reel types: Agent, quiz, flashcards, Autopilot, platform overview and adaptive run.
+
+`reels/plan.sh` does the mechanical work in phases (`validate`, `prepare`, `check`, `finish`) and rejects any plan that breaks the rules. It checks content safety, curriculum-free generated content, selectors on the demo app only, and deterministic scene code. `reels/REELS-RUNBOOK.md` is the planner's brief, with `APP-MAP.md` (what the demo app shows and how to drive it) and `KIT.md` (the plan format and the Remotion kit) beside it.
+
+Voices rotate across four ElevenLabs voices on `eleven_v4`. The old fixed four-reel pipeline, `reels/run.sh`, stays as the fallback if planning or recording fails outright.
 
 ### running unattended
 
@@ -29,7 +33,7 @@ Most runs happen while I'm asleep, so:
 
 ### what's next
 
-Right now there are four fixed reels (Agent course, Agent lesson, quiz, flashcards). Next, the run plans its own: three reels per run, each with its own topic, format, fact-checked content and scene code, gated by automatic checks before delivery. The demo build is also moving onto the current app, including Autopilot and adaptive flashcards.
+A normal run makes three planned reels. Next: deeper coverage of the quiz viewer's adaptive rebuild, and the posting step once an approval flow exists.
 
 ## images (`pipeline/`, `post-templates/`)
 

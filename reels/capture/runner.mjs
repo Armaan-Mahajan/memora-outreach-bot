@@ -104,6 +104,8 @@ await ctx.addInitScript(() => {             // page-side stepped clock; only act
 });
 const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p);
 await cdp.send('Animation.enable');
+// the direct screenshot call ignores the context's pixel density unless it's set on the page explicitly
+await cdp.send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: DPR, mobile: false });
 p.setDefaultTimeout(600000);
 let stepping = false;
 const freezeAnims = () => stepping && cdp.send('Animation.setPlaybackRate', { playbackRate: 0 }).catch(() => {});
@@ -118,12 +120,12 @@ p.on('requestfailed', r => { if (r.isNavigationRequest() && r.frame() === p.main
 
 // ── frames ──
 let n = 0, G = 0, rate = 1, capturing = false, last = null, shots = 0, maxShotMs = 0, mx = W / 2, my = H * 0.8;
-const events = [];
+const events = [], mouse = [];   // mouse: [frame, x, y] for every output frame (the real pointer path)
 const tOut = () => +(n / FPS).toFixed(4);
 const ev = (type, extra = {}) => { events.push({ type, t: tOut(), ...extra }); console.log(type, tOut().toFixed(2), `real ${((Date.now() - T) / 1000).toFixed(0)}s`); };
 // a call into the page that doesn't answer within 2 s real time (a navigation just started) is skipped for this frame
 const within = (pr, fallback, ms = 2000) => Promise.race([pr.catch(() => fallback), new Promise(r => setTimeout(() => r(fallback), ms))]);
-const frame = async () => {
+const frame = async (force = false) => {
   const dt = DT * rate; G += dt;
   await fetch(`${BASE}/__vt?t=${G.toFixed(3)}`).catch(() => {});
   // CDP evaluate runs in whatever document is current right now; page.evaluate would wait for a pending navigation,
@@ -131,8 +133,9 @@ const frame = async () => {
   const changed = navPending ? false : await within(cdp.send('Runtime.evaluate', { expression: `window.__step ? window.__step(${dt}) : true`, returnByValue: true })
     .then(r => r.result?.value !== false), true);
   if (!capturing) return;
-  if (!navPending && (changed || !last)) { const t0 = Date.now(); const shot = await within(cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 90 }), null); if (shot) last = Buffer.from(shot.data, 'base64');
+  if (!navPending && (force || changed || !last)) { const t0 = Date.now(); const shot = await within(cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 90 }), null); if (shot) last = Buffer.from(shot.data, 'base64');
     shots++; maxShotMs = Math.max(maxShotMs, Date.now() - t0); }
+  mouse.push([n, +mx.toFixed(1), +my.toFixed(1)]);
   fs.writeFileSync(`${OUT}/frames/${String(n++).padStart(5, '0')}.jpg`, last);
 };
 const holdMs = async ms => { const k = Math.max(0, Math.round(ms / (DT * rate))); for (let i = 0; i < k; i++) await frame(); };   // ms of APP time
@@ -152,7 +155,7 @@ const steppedScroll = async (dy, ms, page) => {
   const k = Math.max(1, Math.round(ms / 1000 * FPS));
   for (let i = 1; i <= k; i++) {
     await p.evaluate(([dy, u]) => { const e = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; window.__sEl.scrollTop = window.__sY0 + dy * e(u); }, [dy, i / k]);
-    await frame(); } };
+    await frame(true); } };
 const ensureVisible = async l => { const bb = await box(l); if (!bb || (bb.y >= 0 && bb.y + bb.h <= H)) return;
   if (await l.evaluate(e => { for (; e; e = e.parentElement) if (getComputedStyle(e).position === 'fixed') return true; return false; }).catch(() => true)) return;
   const margin = 90; let dy = 0;
@@ -165,9 +168,9 @@ const ensureVisible = async l => { const bb = await box(l); if (!bb || (bb.y >= 
 // on the same schedule the edit's drawn cursor uses: Fitts-law travel time, sine ease, arriving before the click.
 const travel = d => Math.min(0.7, 0.25 + 0.12 * Math.log2(1 + d / 60)) * 1000;
 const glide = async (x, y) => { const x0 = mx, y0 = my, d = Math.hypot(x - x0, y - y0); if (d < 1) return;
-  const k = Math.max(1, Math.round(travel(d) / DT));
-  for (let i = 1; i <= k; i++) { const u = (1 - Math.cos(Math.PI * i / k)) / 2; mx = x0 + (x - x0) * u; my = y0 + (y - y0) * u; await p.mouse.move(mx, my); await frame(); } };
-const moveTo = async l => { await until(visible(l), 'target to appear'); await ensureVisible(l); const bb = await box(l); await glide(bb.x + bb.w / 2, bb.y + bb.h / 2); return bb; };
+  const k = Math.max(2, Math.round(travel(d) / (DT * rate)));   // in a sped-up stretch the hand moves faster too
+  for (let i = 1; i <= k; i++) { const u = (1 - Math.cos(Math.PI * i / k)) / 2; mx = x0 + (x - x0) * u; my = y0 + (y - y0) * u; await p.mouse.move(mx, my); await frame(true); } };
+const moveTo = async (l, what = 'target') => { await until(visible(l), `${what} to appear`, 20000); await ensureVisible(l); const bb = await box(l); await glide(bb.x + bb.w / 2, bb.y + bb.h / 2); return bb; };
 // navigate without blocking: responses only arrive as virtual time moves, so keep stepping until the URL changes
 const nav = async (to, re) => { navPending = true; p.goto(to, { waitUntil: 'commit' }).catch(() => {}); await until(async () => re.test(p.url()), to, 30000); await freezeAnims(); };
 const press = async () => { await p.mouse.down(); await frame(); await frame(); await p.mouse.up(); await frame(); };
@@ -177,8 +180,8 @@ const steps = {
   // speed: fast plays the app x× faster in the clip (default SPEED.x = 5); normal restores real pace
   speed: async s => { rate = s.k === 'normal' ? 1 : Math.max(1, s.x ?? SPEED.x); await fetch(`${BASE}/__anchor`).catch(() => {}); ev('speed', { k: s.k, F: rate }); },
   mark: async () => {},
-  hover: async s => { await moveTo(loc(s.target)); },
-  click: async s => { const l = loc(s.target); const bb = await moveTo(l); await holdMs(s.dwell ?? 140);
+  hover: async s => { await moveTo(loc(s.target), JSON.stringify(s.target)); },
+  click: async s => { const l = loc(s.target); const bb = await moveTo(l, JSON.stringify(s.target)); await holdMs(s.dwell ?? 140);
     const href = s.expect_url ? await l.getAttribute('href').catch(() => null) : null;
     ev('click', { target: s.as || JSON.stringify(s.target), box: bb }); await press();
     // a link that should navigate: give it 4 s, then load its href directly. A button with no href (e.g. Generate)
@@ -196,7 +199,7 @@ const steps = {
       capturing = true; last = null; ev('cut', { removed: +((G - n0) / 1000).toFixed(3) });
       return; }
     const f = s.for;
-    if (f.load) { await until(async () => (await p.evaluate(() => document.readyState)) === 'complete', 'page load');
+    if (f.load) { await until(async () => !navPending && (await within(cdp.send('Runtime.evaluate', { expression: 'document.readyState', returnByValue: true }).then(r => r.result?.value), null)) === 'complete', 'page load');
       let quiet = 0, t0 = G;                   // then until the proxy has nothing in flight for 0.3 s (max 6 s)
       while (quiet < 0.3 * FPS && G - t0 < 6000) { const r = await fetch(`${BASE}/__vt?t=${G.toFixed(3)}`).then(r => r.json()).catch(() => ({ pending: 0 }));
         quiet = r.pending ? 0 : quiet + 1; await frame(); } }
@@ -216,7 +219,8 @@ await p.locator('button[type=submit]').first().click(); await p.waitForURL(u => 
 // switch to stepped time: from here every document starts frozen, and the proxy delivers on the virtual clock
 await p.evaluate(() => sessionStorage.setItem('__stepped', '1')); stepping = true;
 await fetch(`${BASE}/__vt?t=0`).catch(() => {});
-await nav(BASE + reel.start_url, new RegExp(reel.start_url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+await nav(BASE + reel.start_url, new RegExp('^' + esc(BASE + reel.start_url) + '([?#]|$)'));
 await steps.wait({ for: { load: true } }); await holdMs(1500);       // load + settle, not recorded
 
 // record
@@ -224,6 +228,7 @@ capturing = true; await p.mouse.move(mx, my);
 ev('rec_start');
 for (const s of reel.steps) { await steps[s.do](s); if (s.mark) ev(s.mark); }
 await frame(); ev('rec_end');
+fs.writeFileSync(`${OUT}/mouse.json`, JSON.stringify(mouse));
 fs.writeFileSync(`${OUT}/events.json`, JSON.stringify({ reel: reel.name, viewport: { w: W, h: H }, dpr: DPR, fps: FPS, frames: n, events }, null, 1));
 await b.close(); await fetch(`${BASE}/__real`).catch(() => {});
 execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-framerate', String(FPS), '-i', `${OUT}/frames/%05d.jpg`,

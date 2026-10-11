@@ -1,5 +1,5 @@
 {
- "_doc": "Reels pipeline config. The Supabase URL and publishable key are memora-web's PUBLIC browser values (they ship in the site's JavaScript); the demo password and ElevenLabs key are NOT here — run.sh takes them from the environment.",
+ "_doc": "Reels pipeline config. The Supabase URL and publishable key are memora-web's PUBLIC browser values (they ship in the site's JavaScript); the demo password and ElevenLabs key are NOT here \u2014 run.sh takes them from the environment.",
  "memora_web": {
   "repo": "https://github.com/Armaan-Mahajan/memora-web.git",
   "branch": "demo-recording-mode-v2"
@@ -57,5 +57,29 @@
     35
    ]
   }
- ]
+ ],
+ "voice_model": "eleven_v4",
+ "voices": [
+  {
+   "name": "Justin Case",
+   "id": "DtQLDxHbTiQTpVVanTy1",
+   "feel": "male, calm, educational \u2014 less hype"
+  },
+  {
+   "name": "Belle B",
+   "id": "SQQyvkXssth4s6HD2OuR",
+   "feel": "female, excited"
+  },
+  {
+   "name": "Lucan Rock",
+   "id": "15CVCzDByBinCIoCblXo",
+   "feel": "male, excited"
+  },
+  {
+   "name": "Lyan",
+   "id": "PStJ2DzQnh8zxG5PDf1s",
+   "feel": "female, somewhat excited"
+  }
+ ],
+ "daily_reels": 3
 }

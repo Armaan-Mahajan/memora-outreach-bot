@@ -5,3 +5,5 @@ remotion/out/
 remotion/public/footage/
 remotion/public/vo/
 remotion/public/audio/
+remotion/public/reels/
+remotion/src/reels/*/

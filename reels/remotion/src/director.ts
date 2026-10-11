@@ -152,8 +152,10 @@ export function direct(events: Ev[], regions: Regions, card: { w: number; hMax?:
   ways.sort((a, b) => a.t - b.t);
   const ease = (u: number) => (1 - Math.cos(Math.PI * Math.min(1, Math.max(0, u)))) / 2;
   const legs = ways.map((w, i) => { const from = i === 0 ? { x: 760, y: 700 } : ways[i - 1];
-    const d = Math.hypot(w.x - from.x, w.y - from.y), D = Math.min(0.7, 0.25 + 0.12 * Math.log2(1 + d / 60));
-    const arrive = w.click ? w.t - 0.14 : w.t, start = arrive - D;
+    // in a sped-up stretch (speed event F > 1) the runner moves the real mouse F× faster: match it (min 2 frames)
+    const F = Math.max(1, ([...ev].reverse().find(e => e.type === 'speed' && e.t <= w.t) as any)?.F ?? 1);
+    const d = Math.hypot(w.x - from.x, w.y - from.y), D = Math.max(2 / fps, Math.min(0.7, 0.25 + 0.12 * Math.log2(1 + d / 60)) / F);
+    const arrive = w.click ? w.t - 0.14 / F : w.t, start = arrive - D;
     const nx = -(w.y - from.y) / (d || 1), ny = (w.x - from.x) / (d || 1), bow = 0.14 * d * (i % 2 ? 1 : -1);
     return { start, arrive, from, to: w, ctrl: { x: (from.x + w.x) / 2 + nx * bow, y: (from.y + w.y) / 2 + ny * bow } }; });
   const cursor: Cur[] = [];

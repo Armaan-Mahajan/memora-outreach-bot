@@ -1,4 +1,5 @@
 import React from 'react'; import { Composition } from 'remotion'; import { Reel, FOOTAGE } from './Reel';
+import { REELS } from './reels';   // planned reels (plan.sh): src/reels/index.ts is written by tools/register_reels.py each run
 const dur = (f: string) => { const e = FOOTAGE[f].events.events; const t0 = e.find((x: any) => x.type === 'rec_start').t, t1 = e.find((x: any) => x.type === 'rec_end').t; return Math.floor((t1 - t0 + (FOOTAGE[f].vo.hold ?? 0)) * 30); };   // + end hold when the voiceover outruns the recording
 // Full reels + 10 s frame-style previews (each frame paired with the content type it was designed for)
 const PREVIEWS: [string, string][] = [['hook', 'agent'], ['browser', 'agent'], ['coldopen', 'agent'], ['steps', 'agent'],
@@ -12,5 +13,7 @@ export const Root: React.FC = () => <>
   <Composition id="CourseLesson" component={Reel} durationInFrames={dur('lesson')} fps={30} width={1080} height={1920} defaultProps={{ variant: 'lessonsteps', footage: 'lesson' }} />
   <Composition id="QuizFull" component={Reel} durationInFrames={dur('quizfull')} fps={30} width={1080} height={1920} defaultProps={{ variant: 'quizfullsteps', footage: 'quizfull' }} />
   <Composition id="FlashcardsFull" component={Reel} durationInFrames={dur('flashfull')} fps={30} width={1080} height={1920} defaultProps={{ variant: 'flashfullsteps', footage: 'flashfull' }} />
-  {PREVIEWS.map(([v, f]) => <Composition key={v} id={`Preview-${v}`} component={Reel} durationInFrames={Math.min(300, dur(f))} fps={30} width={1080} height={1920} defaultProps={{ variant: v, footage: f }} />)}
+  {PREVIEWS.map(([v, f]) => <Composition key={v} id={`Preview-${v}`} component={Reel as any} durationInFrames={Math.min(300, dur(f))} fps={30} width={1080} height={1920} defaultProps={{ variant: v, footage: f }} />)}
+  {REELS.map(r => <Composition key={r.slug} id={r.slug} component={r.Component as any} defaultProps={{ R: r.R }}
+    durationInFrames={Math.max(1, Math.round(r.R.dur * 30))} fps={30} width={1080} height={1920} />)}
 </>;

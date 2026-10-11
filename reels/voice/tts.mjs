@@ -35,9 +35,10 @@ async function call(url, opts, label) {
 }
 const H = { 'xi-api-key': KEY, 'content-type': 'application/json' };
 
-// Resolve the voice: use the given id; if it doesn't exist, look it up by name among your voices.
+// Resolve the voice: a given id is used as is (Voice Library voices can be spoken by id without being in "My Voices",
+// and the speech call itself reports a bad id); with only a name, look it up among your voices.
 async function resolveVoice() {
-  if (script.voice_id) { const r = await call(`${API}/voices/${script.voice_id}`, { headers: H }, 'voice lookup'); if (r.ok) return script.voice_id; }
+  if (script.voice_id) return script.voice_id;
   const r = await call(`${API}/voices`, { headers: H }, 'voice list');
   if (!r.ok) throw new Error(`voice lookup failed: ${r.status} ${await r.text()}`);
   const v = (await r.json()).voices.find(v => v.name.toLowerCase().startsWith(script.voice_name.toLowerCase()));
