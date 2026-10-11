@@ -106,7 +106,7 @@ _MWT="${MEMORA_WEB_TOKEN:-}"     # kept unexported (no child process sees it) on
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 MEMORA_WEB_TOKEN
 echo "memora-web at $(git -C "$MW" rev-parse --short HEAD)" | tee -a "$LOG"
 grep -q "process.env.DEMO_PASSWORD" "$MW/scripts/seed-demo-content.ts" \
-  || fail "memora-web's seed script still hard-codes the password — push the demo-recording-mode change first"
+  || fail "memora-web's seed script still hard-codes the password — push the demo-recording-mode-v2 change first"
 python3 - "$MW/.env.local" <<EOF
 import json, sys
 env = json.load(open("$HERE/config.json"))["public_env"]

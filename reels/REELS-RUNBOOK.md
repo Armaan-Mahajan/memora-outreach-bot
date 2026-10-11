@@ -34,7 +34,7 @@ Use the Supabase MCP `get_project` for `dtyiuknezuzqohdxicbg` (memora-outreach).
 ```bash
 git clone --depth 1 https://github.com/Armaan-Mahajan/memora-outreach-bot.git ~/ob
 ```
-memora-web is **private**, and a scheduled session has no GitHub access to it. You do **not** clone it yourself: `run.sh` clones the `demo-recording-mode` branch using the read-only token from stage 2 (`MEMORA_WEB_TOKEN`). If the clone fails, the run stops at the `memora-web` stage. Report that and stop; don't try other credentials, URLs or tools.
+memora-web is **private**, and a scheduled session has no GitHub access to it. You do **not** clone it yourself: `run.sh` clones the `demo-recording-mode-v2` branch using the read-only token from stage 2 (`MEMORA_WEB_TOKEN`). If the clone fails, the run stops at the `memora-web` stage. Report that and stop; don't try other credentials, URLs or tools.
 
 ### 2. Secrets
 Read the three secrets with the Supabase MCP `execute_sql` on `dtyiuknezuzqohdxicbg`:

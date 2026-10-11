@@ -194,7 +194,7 @@
   {
    "do": "click",
    "target": {
-    "css": "button:has-text(\"PSII only\")"
+    "css": "button:has-text(\"Photosystem II only\")"
    },
    "as": "answer"
   },

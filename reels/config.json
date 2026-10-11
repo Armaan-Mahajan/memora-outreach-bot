@@ -2,7 +2,7 @@
  "_doc": "Reels pipeline config. The Supabase URL and publishable key are memora-web's PUBLIC browser values (they ship in the site's JavaScript); the demo password and ElevenLabs key are NOT here \u2014 run.sh takes them from the environment.",
  "memora_web": {
   "repo": "https://github.com/Armaan-Mahajan/memora-web.git",
-  "branch": "demo-recording-mode"
+  "branch": "demo-recording-mode-v2"
  },
  "public_env": {
   "NEXT_PUBLIC_SUPABASE_URL": "https://klcwcegfmxcahskfipws.supabase.co",
