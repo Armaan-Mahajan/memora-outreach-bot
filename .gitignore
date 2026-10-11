@@ -4,3 +4,4 @@ __pycache__/
 *.tar.gz
 .DS_Store
 _to_delete/
+.cursor/
