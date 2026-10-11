@@ -1,131 +1,233 @@
-// reel.json runner: executes a declarative step list against memora-demo with time-dilated,
-// native-2x capture, then writes events.json and a 30 fps clip.mp4. No model in the loop.
+// reel.json runner: executes a declarative step list against the demo app in STEPPED TIME and writes events.json
+// plus a 30 fps clip.mp4. No model in the loop.
 // Usage: DEMO_PASSWORD=... node runner.mjs reel.json
+//
+// How time works while recording: the page's clock (performance.now, Date, timers, requestAnimationFrame) and every
+// CSS/Web animation are frozen between frames. Each output frame advances them by exactly 1/30 s (× the speed factor
+// during `speed: fast`), fires whatever came due, seeks the animations, then takes one screenshot. A slow screenshot
+// therefore can't cause stutter — the page simply waits for it. vproxy.cjs releases the app's responses on the same
+// clock (GET /__vt), so generation streams at its real pace (or x× faster when sped up).
 import { chromium } from 'playwright'; import fs from 'fs'; import { execFileSync } from 'child_process';
 const reel = JSON.parse(fs.readFileSync(process.argv[2] || 'reel.json', 'utf8'));
-const BASE = reel.base || 'http://localhost:3000', OUT = `out/${reel.name}`, SPEED = { normal: 11, fast: 3, x: 5, ...(reel.speed || {}) };
+const BASE = reel.base || 'http://localhost:3000', OUT = `out/${reel.name}`, SPEED = { x: 5, ...(reel.speed || {}) };
 const { w: W, h: H } = reel.viewport || { w: 1320, h: 860 };
+const FPS = 30, DT = 1000 / FPS, DPR = reel.dpr || 1.5;          // 1.5× covers the edit's deepest zoom (~1.33× needed)
 const T = Date.now(); fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT + '/frames', { recursive: true });
 
 const b = await chromium.launch();
-const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, colorScheme: 'dark' });
+const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, colorScheme: 'dark' });
 // optional "hide": [css selectors] — removed from every page (e.g. the floating navbar on quiz/flashcard reels)
 if (reel.hide?.length) await ctx.addInitScript(css => {
   const add = () => { const s = document.createElement('style'); s.textContent = css; (document.head || document.documentElement).appendChild(s); };
   document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', add) : add();
 }, reel.hide.map(sel => `${sel}{display:none!important}`).join('\n'));
-await ctx.addInitScript(() => {            // page-side virtual clock
-  const pn = performance.now.bind(performance), dn = Date.now, OD = Date; const d0 = dn(), p0 = pn();
-  const vc = { K: 1, rb: pn(), vb: pn() };
-  performance.now = () => vc.vb + (pn() - vc.rb) / vc.K;
-  window.__setK = k => { vc.vb = performance.now(); vc.rb = pn(); vc.K = k; };
-  const vnow = () => d0 + (performance.now() - p0);
-  function D(...a) { if (!new.target) return new OD(vnow()).toString(); return a.length ? new OD(...a) : new OD(vnow()); }
-  D.prototype = OD.prototype; D.now = vnow; D.parse = OD.parse; D.UTC = OD.UTC; Object.setPrototypeOf(D, OD); window.Date = D;
-  const st = setTimeout, si = setInterval, raf = requestAnimationFrame.bind(window);
-  window.setTimeout = (f, ms = 0, ...r) => st(f, (+ms || 0) * vc.K, ...r);
-  window.setInterval = (f, ms = 0, ...r) => si(f, (+ms || 0) * vc.K, ...r);
-  window.requestAnimationFrame = cb => raf(() => cb(performance.now()));
+await ctx.addInitScript(() => {             // page-side stepped clock; only active once the runner sets sessionStorage.__stepped
+  let stepped = false; try { stepped = sessionStorage.getItem('__stepped') === '1'; } catch {}
+  if (!stepped) return;
+  const pn = performance.now.bind(performance), OD = Date, d0 = OD.now();
+  const st = setTimeout, ct = clearTimeout;
+  let V = 0;                                 // this document's virtual time, ms (frozen between steps)
+  performance.now = () => V;
+  function D(...a) { if (!new.target) return new OD(d0 + V).toString(); return a.length ? new OD(...a) : new OD(d0 + V); }
+  D.prototype = OD.prototype; D.now = () => d0 + V; D.parse = OD.parse; D.UTC = OD.UTC; Object.setPrototypeOf(D, OD); window.Date = D;
+  let seq = 1; const timers = new Map();
+  window.setTimeout = (f, ms = 0, ...a) => { if (typeof f !== 'function') return st(f, ms); const id = seq++; timers.set(id, { f, ms: Math.max(0, +ms || 0), rep: false, a, due: V + Math.max(0, +ms || 0) }); return id; };
+  window.setInterval = (f, ms = 0, ...a) => { const id = seq++, m = Math.max(1, +ms || 0); timers.set(id, { f, ms: m, rep: true, a, due: V + m }); return id; };
+  window.clearTimeout = window.clearInterval = id => { timers.delete(id); };
+  let rafQ = [], rafSeq = 1;
+  window.requestAnimationFrame = cb => { const id = rafSeq++; rafQ.push({ id, cb }); return id; };
+  window.cancelAnimationFrame = id => { rafQ = rafQ.filter(r => r.id !== id); };
+  // Smooth scrolling runs on the browser's own clock, so it would never move in frozen time. Programmatic smooth scrolls
+  // (scrollTo / scrollBy / scrollIntoView with behavior: 'smooth') are animated here on the virtual clock instead
+  // (~0.45 s, eased); CSS scroll-behavior: smooth is switched off, so any other scroll lands instantly.
+  const noSmooth = document.createElement('style'); noSmooth.textContent = '*,html{scroll-behavior:auto!important}';
+  const addNS = () => (document.head || document.documentElement).appendChild(noSmooth);
+  document.documentElement ? addNS() : document.addEventListener('DOMContentLoaded', addNS);
+  document.addEventListener('DOMContentLoaded', () => { if (!noSmooth.isConnected) addNS(); });
+  const scrollers = el => (el === window || el === document.documentElement || el === document.body) ? document.scrollingElement : el;
+  const animScroll = (el, toX, toY) => { const x0 = el.scrollLeft, y0 = el.scrollTop, t0 = V, D = 450;
+    const tick = () => { const u = Math.min(1, (V - t0) / D), k = u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+      el.scrollLeft = x0 + (toX - x0) * k; el.scrollTop = y0 + (toY - y0) * k; if (u < 1) window.requestAnimationFrame(tick); };
+    window.requestAnimationFrame(tick); };
+  const optsOf = (a, b) => typeof a === 'object' && a ? a : { left: a, top: b };
+  for (const [obj, isWin] of [[Element.prototype, false], [window, true]]) {
+    const oTo = obj.scrollTo, oBy = obj.scrollBy;
+    const to = function (a, b) { const o = optsOf(a, b), el = scrollers(isWin ? window : this);
+      if (o.behavior !== 'smooth') return oTo.call(this, typeof a === 'object' ? { ...o, behavior: 'instant' } : a, b);
+      animScroll(el, o.left ?? el.scrollLeft, o.top ?? el.scrollTop); };
+    obj.scrollTo = to; obj.scroll = to;
+    obj.scrollBy = function (a, b) { const o = optsOf(a, b), el = scrollers(isWin ? window : this);
+      if (o.behavior !== 'smooth') return oBy.call(this, typeof a === 'object' ? { ...o, behavior: 'instant' } : a, b);
+      animScroll(el, el.scrollLeft + (o.left || 0), el.scrollTop + (o.top || 0)); };
+  }
+  const oSIV = Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView = function (arg) {
+    const o = typeof arg === 'object' && arg ? arg : { block: arg === false ? 'end' : 'start' };
+    if (o.behavior !== 'smooth') return oSIV.call(this, { ...o, behavior: 'instant' });
+    const chain = []; for (let e = this.parentElement; e; e = e.parentElement) if (e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth) chain.push(e);
+    chain.push(document.scrollingElement);
+    const before = chain.map(e => [e.scrollLeft, e.scrollTop]);
+    oSIV.call(this, { ...o, behavior: 'instant' });                 // find where it lands…
+    const after = chain.map(e => [e.scrollLeft, e.scrollTop]);
+    chain.forEach((e, i) => { e.scrollLeft = before[i][0]; e.scrollTop = before[i][1]; });   // …then glide there
+    chain.forEach((e, i) => { if (after[i][0] !== before[i][0] || after[i][1] !== before[i][1]) animScroll(e, after[i][0], after[i][1]); });
+  };
+  const anims = new Set();
+  // New animations are paused and from then on only move when stepped. One started by JS against our virtual
+  // performance.now() (framer-motion does) gets a start time on that clock, but the browser measures it against the
+  // real animation timeline, so it shows up with a large NEGATIVE current time — it would wait that long before
+  // starting. A negative current time can only come from that mismatch (a real delay is part of the effect's timing,
+  // not a negative current time), so such an animation starts from 0.
+  const track = () => { for (const a of document.getAnimations()) if (!anims.has(a)) { anims.add(a);
+    try { a.pause(); if (a.currentTime == null || a.currentTime < 0) a.currentTime = 0; } catch {} } };
+  let dirty = true;
+  const watch = () => { new MutationObserver(() => { dirty = true; }).observe(document, { subtree: true, childList: true, attributes: true, characterData: true }); };
+  document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', watch) : watch();
+  addEventListener('scroll', () => { dirty = true; }, true);
+  addEventListener('pointermove', () => { dirty = true; }, true);
+  window.__step = dt => {                     // advance dt ms; returns whether anything on the page may have changed
+    const target = V + dt; let ran = 0;
+    for (;;) { let next = null; for (const [id, t] of timers) if (t.due <= target && (!next || t.due < next[1].due)) next = [id, t];
+      if (!next) break; const [id, t] = next; V = Math.max(V, t.due);
+      if (t.rep) t.due += t.ms; else timers.delete(id); ran++; try { t.f(...t.a); } catch (e) { console.error(e); } }
+    V = target;
+    const q = rafQ; rafQ = []; ran += q.length; for (const r of q) { try { r.cb(V); } catch (e) { console.error(e); } }
+    track();
+    // seek each animation; once past its end, finish() it — a paused animation never resolves its `finished` promise on its
+    // own, and code awaiting it (e.g. framer-motion's AnimatePresence mode="wait") would wait forever
+    const live = new Set(document.getAnimations());
+    for (const a of anims) { if (!a.effect || a.playState === 'finished' || !live.has(a)) { anims.delete(a); continue; }
+      try { const t = (a.currentTime ?? 0) + dt, end = a.effect.getComputedTiming().endTime; ran++;
+        if (Number.isFinite(end) && t >= end) { a.finish(); anims.delete(a); } else a.currentTime = t; } catch {} }
+    const d = dirty || ran > 0; dirty = false; return d;
+  };
 });
-const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p); await cdp.send('Animation.enable');
+const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p);
+await cdp.send('Animation.enable');
 p.setDefaultTimeout(600000);
+let stepping = false;
+const freezeAnims = () => stepping && cdp.send('Animation.setPlaybackRate', { playbackRate: 0 }).catch(() => {});
+p.on('domcontentloaded', freezeAnims); p.on('load', freezeAnims);
+// While a main-frame navigation is in flight the browser won't run anything in the old document (an evaluate or a
+// screenshot just hangs), and the new document can't arrive until the clock moves. So during it we only advance the
+// clock, and the clip holds its last frame; stepping resumes once the new document has taken over.
+let navPending = false;
+p.on('request', r => { if (r.isNavigationRequest() && r.frame() === p.mainFrame()) navPending = true; });
+p.on('framenavigated', f => { if (f === p.mainFrame()) navPending = false; });
+p.on('requestfailed', r => { if (r.isNavigationRequest() && r.frame() === p.mainFrame()) navPending = false; });
 
-let K = 1, rb = Date.now(), vb = 0; const vt = () => vb + (Date.now() - rb) / 1000 / K;
-// Output clock. vt() is the virtual clock the page and the proxy share (it only slows the app down so capture is smooth;
-// it never changes how fast things look). ot() is the finished clip's timeline: it runs F× faster than vt() while a
-// `speed: fast` step is active, so sped-up stretches really are shorter in the clip. Frames and events are stamped with ot().
-const oseg = [{ v0: 0, o0: 0, F: 1 }];
-const ot = v => { let g = oseg[0]; for (let i = oseg.length - 1; i >= 0; i--) if (v >= oseg[i].v0 - 1e-9) { g = oseg[i]; break; } return g.o0 + (v - g.v0) / g.F; };
-const setF = F => { const v = vt(); oseg.push({ v0: v, o0: ot(v), F }); };
-const applyK = () => Promise.all([p.evaluate(k => window.__setK && window.__setK(k), K).catch(() => {}),
-  cdp.send('Animation.setPlaybackRate', { playbackRate: 1 / K }).catch(() => {})]);
-const setK = async k => { vb = vt(); rb = Date.now(); K = k; await Promise.all([applyK(), fetch(BASE + '/__k?k=' + k).catch(() => {})]); };
-p.on('load', () => { applyK(); });
-const sleep = ms => new Promise(r => setTimeout(r, ms * K));
-const frames = [], events = []; let rec = false, loopP;
-const ev = (type, extra = {}) => { const t = +ot(vt()).toFixed(4); events.push({ type, t, K, ...extra }); console.log(type, t.toFixed(2), `K=${K}`, `real ${((Date.now() - T) / 1000).toFixed(0)}s`); };
-const box = async l => { const bb = await l.boundingBox(); return bb && { x: bb.x, y: bb.y, w: bb.width, h: bb.height }; };
+// ── frames ──
+let n = 0, G = 0, rate = 1, capturing = false, last = null, shots = 0, maxShotMs = 0, mx = W / 2, my = H * 0.8;
+const events = [];
+const tOut = () => +(n / FPS).toFixed(4);
+const ev = (type, extra = {}) => { events.push({ type, t: tOut(), ...extra }); console.log(type, tOut().toFixed(2), `real ${((Date.now() - T) / 1000).toFixed(0)}s`); };
+// a call into the page that doesn't answer within 2 s real time (a navigation just started) is skipped for this frame
+const within = (pr, fallback, ms = 2000) => Promise.race([pr.catch(() => fallback), new Promise(r => setTimeout(() => r(fallback), ms))]);
+const frame = async () => {
+  const dt = DT * rate; G += dt;
+  await fetch(`${BASE}/__vt?t=${G.toFixed(3)}`).catch(() => {});
+  // CDP evaluate runs in whatever document is current right now; page.evaluate would wait for a pending navigation,
+  // which itself waits for this clock to move (the proxy holds the response) — a deadlock
+  const changed = navPending ? false : await within(cdp.send('Runtime.evaluate', { expression: `window.__step ? window.__step(${dt}) : true`, returnByValue: true })
+    .then(r => r.result?.value !== false), true);
+  if (!capturing) return;
+  if (!navPending && (changed || !last)) { const t0 = Date.now(); const shot = await within(cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 90 }), null); if (shot) last = Buffer.from(shot.data, 'base64');
+    shots++; maxShotMs = Math.max(maxShotMs, Date.now() - t0); }
+  fs.writeFileSync(`${OUT}/frames/${String(n++).padStart(5, '0')}.jpg`, last);
+};
+const holdMs = async ms => { const k = Math.max(0, Math.round(ms / (DT * rate))); for (let i = 0; i < k; i++) await frame(); };   // ms of APP time
+const until = async (cond, what, maxMs = 120000) => { const t0 = G; while (!(await cond().catch(() => false))) { if (G - t0 > maxMs) throw new Error(`timed out waiting for ${what}`); await frame(); } };
+
+// ── targets, cursor, scrolling ──
 const loc = t => t.css ? p.locator(t.css).first() : t.role ? p.getByRole(t.role, { name: new RegExp(t.name) }).first() : p.getByText(t.text).first();
+const box = async l => { const bb = await l.boundingBox(); return bb && { x: bb.x, y: bb.y, w: bb.width, h: bb.height }; };
+const visible = l => async () => (await l.count()) > 0 && await l.isVisible();
 const rnd = (a, c) => a + Math.random() * (c - a);
-// bring an off-screen target into view with a smooth, frame-stepped scroll (instead of Playwright's instant jump)
-const ensureVisible = async l => { const bb = await box(l); if (!bb || (bb.y >= 0 && bb.y + bb.h <= H)) return;   // only when (partly) off-screen
+// stepped scroll of the page (or the largest scrollable element), eased, one position per output frame
+const steppedScroll = async (dy, ms, page) => {
+  await p.evaluate(page => { let el = document.scrollingElement;
+    if (!page) { const els = [...document.querySelectorAll('*')].filter(e => { const o = getComputedStyle(e).overflowY; return (o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight + 50; });
+      el = els.sort((a, c) => c.clientHeight - a.clientHeight)[0] || el; }
+    window.__sEl = el; window.__sY0 = el.scrollTop; }, !!page);
+  const k = Math.max(1, Math.round(ms / 1000 * FPS));
+  for (let i = 1; i <= k; i++) {
+    await p.evaluate(([dy, u]) => { const e = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; window.__sEl.scrollTop = window.__sY0 + dy * e(u); }, [dy, i / k]);
+    await frame(); } };
+const ensureVisible = async l => { const bb = await box(l); if (!bb || (bb.y >= 0 && bb.y + bb.h <= H)) return;
   if (await l.evaluate(e => { for (; e; e = e.parentElement) if (getComputedStyle(e).position === 'fixed') return true; return false; }).catch(() => true)) return;
   const margin = 90; let dy = 0;
   if (bb.y + bb.h > H - margin) dy = Math.min(bb.y + bb.h - H + margin + 40, bb.y - margin);
   else if (bb.y < margin) dy = bb.y - margin - 40;
   if (Math.abs(dy) < 4) return;
   const page = await p.evaluate(() => document.scrollingElement.scrollHeight > innerHeight + 50);
-  ev('scroll', { dy, ms: 900, auto: true }); await steppedScroll(dy, Math.min(1300, 600 + Math.abs(dy) * 0.9), page); await sleep(250); };
-const moveTo = async l => { await ensureVisible(l); const bb = await box(l); await p.mouse.move(bb.x + bb.w / 2, bb.y + bb.h / 2, { steps: 15 }); return bb; };
-const shot = async t => { const buf = await p.screenshot({ type: 'jpeg', quality: 90, scale: 'device', caret: 'initial', animations: 'allow' });
-  const fn = String(frames.length).padStart(5, '0') + '.jpg'; fs.writeFileSync(`${OUT}/frames/${fn}`, buf); frames.push({ fn, t: +ot(t).toFixed(4), K }); };
-const startLoop = () => { rec = true; loopP = (async () => { while (rec) { const a = vt(); const buf = await p.screenshot({ type: 'jpeg', quality: 90, scale: 'device', caret: 'initial', animations: 'allow' });
-  const t = ot((a + vt()) / 2), fn = String(frames.length).padStart(5, '0') + '.jpg'; fs.writeFileSync(`${OUT}/frames/${fn}`, buf); frames.push({ fn, t: +t.toFixed(4), K }); } })(); };
-const stopLoop = async () => { rec = false; await loopP; };
-// Frame-stepped scroll: pause free-running capture, then for each 1/30 s set the exact eased scroll position,
-// wait two animation frames so the page has fully painted, and take exactly one screenshot. No sampling → no judder/tearing.
-const steppedScroll = async (dy, ms, page) => {
-  await stopLoop(); const t0 = vt(), n = Math.max(1, Math.round(ms / 1000 * 30));
-  await p.evaluate(page => { let el = document.scrollingElement;
-    if (!page) { const els = [...document.querySelectorAll('*')].filter(e => { const o = getComputedStyle(e).overflowY; return (o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight + 50; });
-      el = els.sort((a, c) => c.clientHeight - a.clientHeight)[0] || el; }
-    window.__sEl = el; window.__sY0 = el.scrollTop; }, !!page);
-  for (let i = 1; i <= n; i++) {
-    await p.evaluate(async ([dy, k]) => { const e = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-      window.__sEl.scrollTop = window.__sY0 + dy * e(k); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }, [dy, i / n]);
-    await shot(t0 + i / 30); }
-  vb = t0 + n / 30; rb = Date.now();                 // virtual clock advances exactly the scroll's duration
-  await applyK(); startLoop(); };
+  ev('scroll', { dy, ms: 900, auto: true }); await steppedScroll(dy, Math.min(1300, 600 + Math.abs(dy) * 0.9), page); await holdMs(250); };
+// The real mouse glides to the target one step per frame (so hover states play exactly as a person would trigger them),
+// on the same schedule the edit's drawn cursor uses: Fitts-law travel time, sine ease, arriving before the click.
+const travel = d => Math.min(0.7, 0.25 + 0.12 * Math.log2(1 + d / 60)) * 1000;
+const glide = async (x, y) => { const x0 = mx, y0 = my, d = Math.hypot(x - x0, y - y0); if (d < 1) return;
+  const k = Math.max(1, Math.round(travel(d) / DT));
+  for (let i = 1; i <= k; i++) { const u = (1 - Math.cos(Math.PI * i / k)) / 2; mx = x0 + (x - x0) * u; my = y0 + (y - y0) * u; await p.mouse.move(mx, my); await frame(); } };
+const moveTo = async l => { await until(visible(l), 'target to appear'); await ensureVisible(l); const bb = await box(l); await glide(bb.x + bb.w / 2, bb.y + bb.h / 2); return bb; };
+// navigate without blocking: responses only arrive as virtual time moves, so keep stepping until the URL changes
+const nav = async (to, re) => { navPending = true; p.goto(to, { waitUntil: 'commit' }).catch(() => {}); await until(async () => re.test(p.url()), to, 30000); await freezeAnims(); };
+const press = async () => { await p.mouse.down(); await frame(); await frame(); await p.mouse.up(); await frame(); };
 
 const steps = {
-  pause: async s => sleep(s.ms),
-  // speed: fast compresses the clip by s.x (default SPEED.x, 5x) and lowers the slow-down so capture stays quick; normal restores both.
-  speed: async s => { const F = s.k === 'normal' ? 1 : Math.max(1, s.x ?? SPEED.x); setF(F); await setK(SPEED[s.k] ?? s.k); ev('speed', { k: s.k, F }); },
+  pause: async s => holdMs(s.ms),
+  // speed: fast plays the app x× faster in the clip (default SPEED.x = 5); normal restores real pace
+  speed: async s => { rate = s.k === 'normal' ? 1 : Math.max(1, s.x ?? SPEED.x); await fetch(`${BASE}/__anchor`).catch(() => {}); ev('speed', { k: s.k, F: rate }); },
   mark: async () => {},
-  hover: async s => { const l = loc(s.target); await l.waitFor(); await moveTo(l); },
-  click: async s => { const l = loc(s.target); await l.waitFor(); const bb = await moveTo(l); await sleep(s.dwell ?? 220);
+  hover: async s => { await moveTo(loc(s.target)); },
+  click: async s => { const l = loc(s.target); const bb = await moveTo(l); await holdMs(s.dwell ?? 140);
     const href = s.expect_url ? await l.getAttribute('href').catch(() => null) : null;
-    ev('click', { target: s.as || JSON.stringify(s.target), box: bb }); await l.click({ timeout: 5000 * K }).catch(() => {});
-    if (s.expect_url) { const re = new RegExp(s.expect_url);
-      await Promise.race([p.waitForURL(re).catch(() => {}), sleep(1500)]);
-      if (!re.test(p.url()) && href) { ev('nav_fallback', { href }); await p.goto(BASE + href); } } },
+    ev('click', { target: s.as || JSON.stringify(s.target), box: bb }); await press();
+    // a link that should navigate: give it 4 s, then load its href directly. A button with no href (e.g. Generate)
+    // isn't waited on here — the script's next `wait` step covers it, so a following `speed` step applies to the wait
+    if (s.expect_url && href) { const re = new RegExp(s.expect_url);
+      try { await until(async () => re.test(p.url()), s.expect_url, 4000); }
+      catch { ev('nav_fallback', { href }); await nav(BASE + href, re); } } },
   type: async s => { const keys = [];
-    for (const ch of s.text) { await p.keyboard.type(ch); keys.push(+ot(vt()).toFixed(4));
+    for (const ch of s.text) { await p.keyboard.type(ch); keys.push(tOut());
       let d = rnd(32, 62); if (ch === ' ') d += rnd(40, 110); if (',—-/.'.includes(ch)) d += rnd(120, 220); if (ch !== ' ' && Math.random() < 0.04) d += rnd(150, 260);
-      await sleep(d); }
+      await holdMs(d); }
     ev('keys', { times: keys, text: s.text }); },
-  wait: async s => { if (s.cut) {             // edit out dead time (loading/blank transitions): stop capturing, wait, settle, rewind the clock
-      await stopLoop(); const a = vt(); await steps.wait({ ...s, cut: false }); await sleep(s.settle ?? 400);
-      const removed = +(vt() - a).toFixed(3); vb = a; rb = Date.now(); ev('cut', { removed }); await applyK(); startLoop(); return; }
+  wait: async s => { if (s.cut) {             // edit out dead time (loading/blank transitions): keep stepping, stop saving frames
+      capturing = false; const n0 = G; await steps.wait({ ...s, cut: false }); await holdMs(s.settle ?? 400);
+      capturing = true; last = null; ev('cut', { removed: +((G - n0) / 1000).toFixed(3) });
+      return; }
     const f = s.for;
-    if (f.load) { await p.waitForLoadState('load'); await p.waitForLoadState('networkidle', { timeout: 6000 * K }).catch(() => {}); }
-    else if (f.url) await p.waitForURL(new RegExp(f.url));
-    else if (f.enabled) { const l = loc(f.enabled); await l.waitFor(); while (!(await l.isEnabled())) await p.waitForTimeout(100); }
-    else await loc(f).waitFor(); },
-  press: async s => { if (s.target) { const l = loc(s.target); await l.waitFor(); const bb = await moveTo(l); await sleep(180); ev('click', { target: s.as || 'press', box: bb }); await l.click(); }
-    for (let i = 0; i < (s.times || 1); i++) { await p.keyboard.press(s.key); ev('press', { key: s.key }); await sleep(s.gap ?? 260); } },
+    if (f.load) { await until(async () => (await p.evaluate(() => document.readyState)) === 'complete', 'page load');
+      let quiet = 0, t0 = G;                   // then until the proxy has nothing in flight for 0.3 s (max 6 s)
+      while (quiet < 0.3 * FPS && G - t0 < 6000) { const r = await fetch(`${BASE}/__vt?t=${G.toFixed(3)}`).then(r => r.json()).catch(() => ({ pending: 0 }));
+        quiet = r.pending ? 0 : quiet + 1; await frame(); } }
+    else if (f.url) await until(async () => new RegExp(f.url).test(p.url()), f.url);
+    else if (f.enabled) { const l = loc(f.enabled); await until(async () => (await visible(l)()) && await l.isEnabled(), 'button to be enabled'); }
+    else await until(visible(loc(f)), JSON.stringify(f)); },
+  press: async s => { if (s.target) { const l = loc(s.target); const bb = await moveTo(l); await holdMs(140); ev('click', { target: s.as || 'press', box: bb }); await press(); }
+    for (let i = 0; i < (s.times || 1); i++) { await p.keyboard.press(s.key); ev('press', { key: s.key }); await holdMs(s.gap ?? 260); } },
   scroll: async s => { ev('scroll', { dy: s.dy, ms: s.ms }); await steppedScroll(s.dy, s.ms, s.page); },
 };
 
-// login + start page (not recorded)
+// login (real time, not recorded)
+await fetch(`${BASE}/__real`).catch(() => {});          // a crashed earlier run may have left the proxy on the virtual clock
 await p.goto(BASE + '/auth/login', { waitUntil: 'networkidle' });
 await p.fill('input[type="email"]', reel.account || 'john.doe@the-memora.com'); await p.fill('input[type="password"]', process.env.DEMO_PASSWORD);
 await p.locator('button[type=submit]').first().click(); await p.waitForURL(u => !u.pathname.startsWith('/auth'));
-await p.goto(BASE + reel.start_url, { waitUntil: 'load' }); await p.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {}); await p.waitForTimeout(1500);
+// switch to stepped time: from here every document starts frozen, and the proxy delivers on the virtual clock
+await p.evaluate(() => sessionStorage.setItem('__stepped', '1')); stepping = true;
+await fetch(`${BASE}/__vt?t=0`).catch(() => {});
+await nav(BASE + reel.start_url, new RegExp(reel.start_url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+await steps.wait({ for: { load: true } }); await holdMs(1500);       // load + settle, not recorded
 
 // record
-await setK(SPEED.normal); startLoop();
+capturing = true; await p.mouse.move(mx, my);
 ev('rec_start');
 for (const s of reel.steps) { await steps[s.do](s); if (s.mark) ev(s.mark); }
-ev('rec_end'); await stopLoop();
-fs.writeFileSync(`${OUT}/events.json`, JSON.stringify({ reel: reel.name, viewport: { w: W, h: H }, dpr: 2, speed: SPEED, events, frames }, null, 1));
-await b.close();
-
-// resample to constant 30 fps and encode
-const t0 = events[0].t, t1 = events.at(-1).t; fs.mkdirSync(`${OUT}/cfr`, { recursive: true });
-let j = 0; const n = Math.floor((t1 - t0) * 30);
-for (let i = 0; i < n; i++) { const t = t0 + i / 30; while (j + 1 < frames.length && frames[j + 1].t <= t) j++;
-  fs.symlinkSync(fs.realpathSync(`${OUT}/frames/${frames[j].fn}`), `${OUT}/cfr/${String(i).padStart(5, '0')}.jpg`); }
-execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-framerate', '30', '-i', `${OUT}/cfr/%05d.jpg`,
+await frame(); ev('rec_end');
+fs.writeFileSync(`${OUT}/events.json`, JSON.stringify({ reel: reel.name, viewport: { w: W, h: H }, dpr: DPR, fps: FPS, frames: n, events }, null, 1));
+await b.close(); await fetch(`${BASE}/__real`).catch(() => {});
+execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-framerate', String(FPS), '-i', `${OUT}/frames/%05d.jpg`,
   '-c:v', 'libx264', '-crf', '16', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/clip.mp4`]);
-console.log(`DONE ${OUT}/clip.mp4 — ${frames.length} frames, ${(t1 - t0).toFixed(1)}s video, ${((Date.now() - T) / 1000).toFixed(0)}s real`);
+const real = (Date.now() - T) / 1000;
+fs.writeFileSync(`${OUT}/capture.json`, JSON.stringify({ frames: n, clip_s: +(n / FPS).toFixed(2), screenshots: shots, reused: n - shots, slowest_screenshot_ms: maxShotMs, real_s: +real.toFixed(1) }, null, 1));
+console.log(`DONE ${OUT}/clip.mp4 — ${n} frames, ${(n / FPS).toFixed(1)}s video, ${shots} screenshots (${n - shots} reused), ${real.toFixed(0)}s real`);

@@ -144,6 +144,7 @@ export const Reel: React.FC<{ variant?: string; footage?: string }> = ({ variant
   const CH = V.chrome ? 54 : 0;   // browser title-bar height
   const rel = (type: string, i = 0) => { const e = evs.filter(e => e.type === type)[i]; return e ? e.t - t0 : null; };
   // "Sped up" windows: from each speed event with F > 1 to the next speed event (the recorder compresses the clip in between)
+  const genDone = rel('course_gen_done');            // the 'done' chime when the course finishes
   const spd = evs.filter(e => e.type === 'speed');
   const sped: [number, number][] = spd.flatMap((e, i) => e.F > 1 ? [[e.t - t0, Math.max(e.t + 0.3, spd[i + 1]?.t ?? evs[evs.length - 1].t) - t0] as [number, number]] : []);
   const chip = Math.max(0, ...sped.map(([a, b]) => interpolate(t, [a - 0.15, a + 0.15, b - 0.1, b + 0.2], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })));

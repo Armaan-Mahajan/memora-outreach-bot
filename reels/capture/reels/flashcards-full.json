@@ -39,6 +39,11 @@
    "expect_url": "/flashcards/ai-gen/save"
   },
   {
+   "do": "speed",
+   "k": "fast",
+   "x": 4
+  },
+  {
    "do": "wait",
    "for": {
     "url": "/flashcards/ai-gen/save"
@@ -50,6 +55,10 @@
     "load": true
    },
    "mark": "results_open"
+  },
+  {
+   "do": "speed",
+   "k": "normal"
   },
   {
    "do": "pause",
@@ -93,7 +102,9 @@
    "do": "wait",
    "for": {
     "url": "/flashcards/viewer/"
-   }
+   },
+   "cut": true,
+   "settle": 300
   },
   {
    "do": "wait",

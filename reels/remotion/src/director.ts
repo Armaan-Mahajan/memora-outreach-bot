@@ -21,15 +21,16 @@
 // ─── CURSOR RULES ────────────────────────────────────────────────────────────────
 // 1. The cursor is drawn (the capture has none). It travels to each click target on a
 //    gentle curve (quadratic Bézier, bow = 14% of the distance, alternating sides).
-// 2. Travel time follows Fitts' law: 0.32 s + 0.14 s·log2(1 + d/60), capped at 0.85 s,
-//    eased in-out, and it ARRIVES 0.14 s before the click (a human settles, then clicks).
+// 2. Travel time follows Fitts' law: 0.25 s + 0.12 s·log2(1 + d/60), capped at 0.7 s, with a sine ease (peak speed
+//    ~1.6× average, so long moves glide instead of whipping), and it ARRIVES 0.14 s before the click (a human settles,
+//    then clicks). capture/runner.mjs moves the real mouse on the same schedule, so hover effects line up.
 // 3. Click: cursor dips to 82% for 90 ms + a brand-violet ring expands from the tip (0.45 s).
 // 4. While typing, the cursor fades out (0.25 s) and returns when it next moves.
 // 5. When stationary for > 0.8 s it drifts a pixel or two, so it looks held, not pasted.
 // 6. Size is ~36 px on screen at a typical zoom and grows only gently with zoom (^0.35).
 
 export type Box = { x: number; y: number; w: number; h: number };
-export type Ev = { type: string; t: number; box?: Box; times?: number[]; text?: string; target?: string };
+export type Ev = { type: string; t: number; box?: Box; times?: number[]; text?: string; target?: string; F?: number };
 export type Regions = Record<string, Box>;
 // Per-reel beats: frame `region` (a page box, 'WIDE', or 'click' = the click target with context)
 // at event `ev` (an event type or 'click:<target>'), the i-th occurrence (or every one, i = 'all'), offset dt seconds.
@@ -149,9 +150,9 @@ export function direct(events: Ev[], regions: Regions, card: { w: number; hMax?:
     ways.push({ t: c.t, x: p.x, y: p.y, click: true }); }
   if (vo) ways.push({ t: vo.t + 1.6, x: 790, y: 470, click: false });  // drift into the content after navigation
   ways.sort((a, b) => a.t - b.t);
-  const ease = (u: number) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
+  const ease = (u: number) => (1 - Math.cos(Math.PI * Math.min(1, Math.max(0, u)))) / 2;
   const legs = ways.map((w, i) => { const from = i === 0 ? { x: 760, y: 700 } : ways[i - 1];
-    const d = Math.hypot(w.x - from.x, w.y - from.y), D = Math.min(0.85, 0.32 + 0.14 * Math.log2(1 + d / 60));
+    const d = Math.hypot(w.x - from.x, w.y - from.y), D = Math.min(0.7, 0.25 + 0.12 * Math.log2(1 + d / 60));
     const arrive = w.click ? w.t - 0.14 : w.t, start = arrive - D;
     const nx = -(w.y - from.y) / (d || 1), ny = (w.x - from.x) / (d || 1), bow = 0.14 * d * (i % 2 ? 1 : -1);
     return { start, arrive, from, to: w, ctrl: { x: (from.x + w.x) / 2 + nx * bow, y: (from.y + w.y) / 2 + ny * bow } }; });

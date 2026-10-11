@@ -17,7 +17,7 @@
 #   MEMORA_WEB  path to an existing memora-web clone to reuse (it is fetched and switched to the demo branch).
 #   ONLY        space-separated reel names to run a subset, e.g. ONLY="quiz-full".
 #   RETRY_FAST  testing only: any value shortens every retry pause to 1 s.
-#   CAPTURE_TIMEOUT  seconds one reel recording may take before it counts as stuck (default 1200).
+#   CAPTURE_TIMEOUT  seconds one reel recording may take before it counts as stuck (default 1800).
 set -Eeuo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -120,7 +120,7 @@ npm_ci() { (cd "$1" && npm ci --no-audit --no-fund >>"$LOG" 2>&1); }
 retry 3 20 "npm ci (memora-web)" npm_ci "$MW" || fail "npm ci failed in memora-web"
 (cd "$MW" && npx next build >>"$LOG" 2>&1) || fail "next build failed"
 
-# ── 3. servers: next on :3001, time-dilation proxy on :3000 ────────────────────
+# ── 3. servers: next on :3001, virtual-clock proxy on :3000 ────────────────────
 stage servers
 retry 3 20 "npm ci (capture)" npm_ci "$HERE/capture" || fail "npm ci failed in capture/"
 cleanup; sleep 1    # nothing left over from an earlier attempt may still hold :3000 / :3001
@@ -148,10 +148,24 @@ for r in $REELS; do
   # a retry re-seeds first, so the half-finished attempt's course/quiz/deck doesn't show up in the next try's library
   capture() { [ "$ATTEMPT" -gt 1 ] && { seed || return 1; }
     rm -rf "$HERE/capture/out/$1"
-    (cd "$HERE/capture" && timeout "${CAPTURE_TIMEOUT:-1200}" node runner.mjs "$HERE/$(rcfg "$1" capture)" >>"$LOG" 2>&1) && [ -s "$HERE/capture/out/$1/clip.mp4" ]; }
+    (cd "$HERE/capture" && timeout "${CAPTURE_TIMEOUT:-1800}" node runner.mjs "$HERE/$(rcfg "$1" capture)" >>"$LOG" 2>&1) && [ -s "$HERE/capture/out/$1/clip.mp4" ]; }
   retry 2 15 "recording $r" capture "$r" || fail "recording failed"
   clip="$HERE/capture/out/$r/clip.mp4"
-  d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$clip"); echo "  $r: ${d}s" | tee -a "$LOG"
+  # stepped capture: every frame is exactly 1/30 s, so smoothness holds by construction. Check the recording itself:
+  # the clip has the expected frame count, and the page wasn't frozen (a stuck page reuses nearly every frame)
+  python3 - "$HERE/capture/out/$r" <<'PY' | tee -a "$LOG" || fail "recording $r looks wrong (see run.log)"
+import json, subprocess, sys
+d = sys.argv[1]; c = json.load(open(f'{d}/capture.json'))
+n = int(subprocess.run(['ffprobe', '-v', 'error', '-count_frames', '-select_streams', 'v:0', '-show_entries', 'stream=nb_read_frames',
+                        '-of', 'csv=p=0', f'{d}/clip.mp4'], capture_output=True, text=True).stdout.strip() or 0)
+print(f"  {d.rsplit('/', 1)[-1]}: {c['clip_s']}s, {c['frames']} frames ({c['screenshots']} screenshots, {c['reused']} reused), "
+      f"slowest screenshot {c['slowest_screenshot_ms']} ms, recorded in {c['real_s']}s")
+problems = []
+if abs(n - c['frames']) > 1: problems.append(f'clip has {n} frames, recorder wrote {c["frames"]}')
+if c['frames'] > 90 and c['screenshots'] < 0.1 * c['frames']: problems.append('the page barely changed (frozen page?)')
+for p in problems: print('  PROBLEM:', p)
+sys.exit(1 if problems else 0)
+PY
 done
 
 # ── 6. voiceover (ElevenLabs) ──────────────────────────────────────────────────
