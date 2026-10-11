@@ -61,8 +61,10 @@ retry() { local n=$1 p=$2 label=$3 i rc; shift 3
   note "$label: failed after $n attempts"; return 1; }
 # git/seed output that means bad credentials, not a flaky network
 AUTH_ERR='Authentication failed|could not read Username|returned error: 40[13]|Invalid login credentials|invalid_grant'
-cleanup() { for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null || true; done
-  pkill -f "[n]ext start -p 3001" 2>/dev/null || true; pkill -f "[n]ode vproxy.cjs" 2>/dev/null || true; }
+# kill each server's whole process tree: npx forks next, which forks next-server, and killing only npx left it holding :3001
+killtree() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done; kill "$1" 2>/dev/null || true; }
+cleanup() { for p in "${PIDS[@]:-}"; do [ -n "$p" ] && killtree "$p"; done
+  pkill -f "[n]ext start -p 3001" 2>/dev/null || true; pkill -f "[n]ext-server" 2>/dev/null || true; pkill -f "[n]ode vproxy.cjs" 2>/dev/null || true; }
 trap 'status failed "command failed (line $LINENO) — see run.log"; echo "FAILED at stage $STAGE (line $LINENO)" >> "$LOG"' ERR
 trap cleanup EXIT
 
@@ -105,6 +107,8 @@ retry 3 20 "memora-web clone" mw_get \
 _MWT="${MEMORA_WEB_TOKEN:-}"     # kept unexported (no child process sees it) only for the one whole-run restart
 unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 MEMORA_WEB_TOKEN
 echo "memora-web at $(git -C "$MW" rev-parse --short HEAD)" | tee -a "$LOG"
+grep -q '"seed:demo"' "$MW/package.json" \
+  || fail "memora-web's package.json has no seed:demo script — the demo branch lost it (check package.json after merging prod)"
 grep -q "process.env.DEMO_PASSWORD" "$MW/scripts/seed-demo-content.ts" \
   || fail "memora-web's seed script still hard-codes the password — push the demo-recording-mode-v2 change first"
 python3 - "$MW/.env.local" <<EOF
@@ -119,6 +123,8 @@ retry 3 20 "npm ci (memora-web)" npm_ci "$MW" || fail "npm ci failed in memora-w
 # ── 3. servers: next on :3001, time-dilation proxy on :3000 ────────────────────
 stage servers
 retry 3 20 "npm ci (capture)" npm_ci "$HERE/capture" || fail "npm ci failed in capture/"
+cleanup; sleep 1    # nothing left over from an earlier attempt may still hold :3000 / :3001
+for port in 3000 3001; do curl -s -o /dev/null "http://localhost:$port" && fail "port $port is still in use by an earlier server"; done
 (cd "$MW" && exec npx next start -p 3001 >>"$WORK/next.log" 2>&1) & PIDS+=($!)
 (cd "$HERE/capture" && exec node vproxy.cjs >>"$WORK/vproxy.log" 2>&1) & PIDS+=($!)
 ok=""
@@ -131,7 +137,7 @@ done
 # ── 4. reset the demo account to its baseline ──────────────────────────────────
 stage seed
 seed() { local out; out=$(mktemp)
-  (cd "$MW" && set -a && . ./.env.local && set +a && npm run -s seed:demo >"$out" 2>&1); local rc=$?
+  (cd "$MW" && set -a && . ./.env.local && set +a && npm run seed:demo >"$out" 2>&1); local rc=$?
   cat "$out" >> "$LOG"; grep -qE "$AUTH_ERR" "$out" && rc=2; rm -f "$out"; return $rc; }
 retry 2 30 "seed" seed \
   || fail "seed:demo failed — $( [ -n "$PERMANENT" ] && echo 'login refused: is DEMO_PASSWORD (Vault demo_password) correct?' || echo 'see run.log')"
