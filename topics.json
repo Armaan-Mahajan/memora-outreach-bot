@@ -40,7 +40,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "Electron-transfer framing (OIL RIG) is universal. Stick to identifying oxidation/reduction, not balancing complex half-equations, which varies by board depth."
+      "notes": "Electron-transfer framing is universal: oxidation is loss of electrons, reduction is gain. Give both common mnemonics (OIL RIG in the UK, LEO the lion says GER in the US) or neither. Stick to identifying oxidation/reduction, not balancing complex half-equations, which varies by board depth."
     },
     {
       "subject": "Chemistry",
@@ -76,7 +76,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "Universal: boiling overcomes the forces between molecules, not the covalent bonds inside them -- steam is still water molecules. Names for intermolecular forces vary by board (London/dispersion, van der Waals, induced dipole-dipole), so say 'intermolecular forces' and don't commit to one scheme. The younger states-of-matter deck stops at particles moving further apart and never mentions bonds."
+      "notes": "Universal, and only about what breaks: boiling overcomes the forces between molecules, not the covalent bonds inside them -- steam is still water molecules. Names for intermolecular forces vary by board (London/dispersion, van der Waals, induced dipole-dipole), so say 'intermolecular forces' and don't commit to one scheme. Why the temperature holds steady is the latent-heat deck. The younger states-of-matter deck stops at particles moving further apart and never mentions bonds."
     },
     {
       "subject": "Chemistry",
@@ -166,7 +166,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "Foundational, non-controversial evolutionary biology distinction (selection vs. random allele-frequency change) taught identically everywhere."
+      "notes": "Foundational, non-controversial evolutionary biology distinction (selection vs. random allele-frequency change, strongest in small populations). Upper-level only: younger courses teach natural selection but usually not genetic drift."
     },
     {
       "subject": "Biology",
@@ -182,7 +182,7 @@
       "topic": "Genes, alleles, genotype, phenotype: the vocabulary untangled",
       "slug": "gene-allele-genotype-phenotype",
       "archetype": "micro-lesson",
-      "level": "upper",
+      "level": "younger",
       "safe_for": "all",
       "notes": "Definitional and universal. Mendel's pea plants (flower colour) make a neutral running example taught everywhere. Leave Punnett squares out -- the definitions don't need them."
     },
@@ -209,7 +209,7 @@
       "topic": "Why cells are so small: surface area to volume",
       "slug": "surface-area-to-volume",
       "archetype": "micro-lesson",
-      "level": "upper",
+      "level": "younger",
       "safe_for": "all",
       "notes": "Universal: volume grows faster than surface area, so a big cell can't exchange materials fast enough. The 1 cm vs. 2 cm cube calculation fits in math blocks -- numbers, not a diagram."
     },
@@ -227,7 +227,7 @@
       "topic": "Nerves vs. hormones: two ways your body sends messages",
       "slug": "nervous-vs-hormonal",
       "archetype": "micro-lesson",
-      "level": "upper",
+      "level": "younger",
       "safe_for": "all",
       "notes": "Universal comparison (fast, short-lived, targeted vs. slower, longer-lasting, widespread). Adrenaline is a safe hormone example; keep reproductive hormones out entirely."
     },
@@ -256,7 +256,7 @@
       "archetype": "micro-lesson",
       "level": "younger",
       "safe_for": "all",
-      "notes": "Classic intro-biology distinction, definitional, no diagram required to explain correctly."
+      "notes": "Classic intro-biology distinction, no diagram required. Courses phrase osmosis differently (dilute to concentrated solution, high to low water concentration, or water potential at upper levels), so say it plainly: water moves across a partially permeable membrane from where there's more water to where there's less. Don't commit to any one board's term."
     },
     {
       "subject": "Biology",
@@ -373,7 +373,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "Universal: during a change of state, energy goes into overcoming forces between particles rather than raising the temperature. Stay qualitative; specific-latent-heat symbols vary by board."
+      "notes": "Universal, and only about the temperature plateau: while ice melts or water boils, the energy supplied goes into the change of state, so the temperature stays put until it's done. Stay qualitative; specific-latent-heat symbols vary by board. What does and doesn't break when water boils is the boiling deck -- don't restate it."
     },
     {
       "subject": "Physics",
@@ -445,7 +445,7 @@
       "archetype": "micro-lesson",
       "level": "younger",
       "safe_for": "all",
-      "notes": "Universal: mass (kg) is the amount of matter; weight is a force (N), W = mg. The hook: your mass is the same on the Moon, your weight isn't. Use g = 9.8 N/kg and note some courses round to 10."
+      "notes": "Universal: mass (kg) is the amount of matter; weight is a force (N), W = mg. The hook: your mass is the same on the Moon, your weight isn't. Use g = 9.8 N/kg (some courses use 9.81, some round to 10) and say so once."
     },
     {
       "subject": "Physics",
@@ -562,7 +562,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "Universal across science and psychology research methods (consistent results vs. actually measuring what you meant to). A bathroom scale that's always 2 kg off is reliable but not valid. Related terms ('repeatable', 'reproducible') vary by board -- note the overlap."
+      "notes": "Research-methods terms, psychology-style: reliability is getting consistent results; validity is measuring what you meant to measure. Example: a 'reading test' that only times how fast students read gives the same scores every week (reliable) but doesn't measure understanding (not valid). Don't use measuring-instrument errors -- that's the random-vs-systematic-error and accuracy-vs-precision decks. Note that some school science courses use 'valid' more loosely (a fair test that answers the question); say so once."
     },
     {
       "subject": "Science skills",
@@ -571,7 +571,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "The well-documented story of a horse that seemed to do arithmetic but was reading unconscious cues from its questioners -- a great hook for experimenter bias and double-blind design. Different from the placebo-effect deck (that one is participants' expectations; this one is researchers')."
+      "notes": "The well-documented story of a horse that seemed to do arithmetic but was reading unconscious cues from its questioners -- a great hook for experimenter bias and why double-blind design hides the condition from researchers as well as participants. Keep the focus on the researchers' side; don't build the deck around placebo effects."
     },
     {
       "subject": "Science skills",
@@ -742,7 +742,7 @@
       "archetype": "micro-lesson",
       "level": "younger",
       "safe_for": "all",
-      "notes": "Statistics fundamental taught the same way in every math/science curriculum; no diagram needed, just examples."
+      "notes": "Statistics fundamental: two things rising together doesn't mean one causes the other (a third factor, chance, or reverse direction). No diagram needed -- invented, everyday examples only (e.g. ice-cream sales and sunburn both rise in summer)."
     },
     {
       "subject": "Math",
@@ -751,7 +751,7 @@
       "archetype": "micro-lesson",
       "level": "younger",
       "safe_for": "all",
-      "notes": "Universal, ancient, undisputed. Describable algebraically without a triangle diagram. Right-angled triangles only -- no trigonometry and no three-dimensional Pythagoras. Area and volume are a separate deck."
+      "notes": "Universal, ancient, undisputed. Purely numerical, no figure: a right-angled triangle's longest side (the side opposite the right angle) is found from a^2 + b^2 = c^2; work 3-4-5 and one more triple. Right-angled triangles only -- no trigonometry and no three-dimensional Pythagoras. Area and volume are a separate deck."
     },
     {
       "subject": "Math",
@@ -884,7 +884,7 @@
       "topic": "Stacks vs. queues",
       "slug": "stacks-vs-queues",
       "archetype": "micro-lesson",
-      "level": "younger",
+      "level": "upper",
       "safe_for": "all",
       "notes": "Universal data structures (last in, first out vs. first in, first out). Everyday analogies (a stack of plates; a lunch queue) and one real use each (undo history; a print queue). No code."
     },
@@ -931,7 +931,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "Classic misconception-correction micro-lesson. Mechanism-only, no policy framing, describable without an actual graph."
+      "notes": "Classic misconception, taught as 'price change vs. non-price change' with no curve language: a change in a good's own price changes the quantity people buy; a change in anything else (income, tastes, the price of a substitute) changes how much they want at every price. Words and one everyday example only -- the curve version needs a graph, which slideshows don't carry. Mechanism only, no policy framing."
     },
     {
       "subject": "Economics",
@@ -1003,7 +1003,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "Robust memory finding (primacy and recency). Classic detail: a short delay before recall wipes out the recency effect. Bridge to study habits (the middle of a long list or session is the weak spot) without overclaiming."
+      "notes": "Robust memory finding (primacy and recency). Classic detail: about 30 seconds of a distracting task between the list and recall (e.g. counting backwards) wipes out the recency effect while primacy stays (Glanzer & Cunitz, 1966). A silent delay alone doesn't. Bridge to study habits (the middle of a long list or session is the weak spot) without overclaiming."
     },
     {
       "subject": "Psychology",
@@ -1030,7 +1030,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "Universal definitions. Invented examples, or very widely known ones (the ending of Romeo and Juliet for dramatic irony). Skip the 'is rain on your wedding day ironic?' debate -- contested and distracting."
+      "notes": "Universal definitions. Use invented, everyday examples only (no set texts -- the classic literary examples often hinge on deaths or violence, which doesn't suit this audience). Skip the 'is rain on your wedding day ironic?' debate -- contested and distracting."
     },
     {
       "subject": "English / Literature",
@@ -1048,7 +1048,7 @@
       "archetype": "micro-lesson",
       "level": "upper",
       "safe_for": "all",
-      "notes": "Universal concept. Use a long-established, widely taught example (Poe's 'The Tell-Tale Heart') or an invented one. Avoid texts with mature content given the audience."
+      "notes": "Universal concept. Use an invented narrator in a low-stakes everyday situation (e.g. someone retelling a match they lost, or a party they weren't invited to) and show the clues that the account is slanted. No set texts -- many of the famous examples involve violence or crime."
     },
     {
       "subject": "English / Literature",
@@ -1172,7 +1172,7 @@
       "topic": "Ser vs. estar",
       "slug": "spanish-ser-vs-estar",
       "archetype": "micro-lesson",
-      "level": "upper",
+      "level": "younger",
       "safe_for": "all",
       "notes": "Core Spanish distinction, taught everywhere. 'Permanent vs. temporary' is a known oversimplification (estar muerto is the classic counterexample) -- teach it as a starting point and show the well-known exceptions."
     },
@@ -1271,7 +1271,7 @@
       "topic": "Why earthquakes cluster at plate edges",
       "slug": "plate-boundaries-earthquakes",
       "archetype": "micro-lesson",
-      "level": "upper",
+      "level": "younger",
       "safe_for": "all",
       "notes": "Earth's outer shell is broken into plates that move a few centimetres a year. Most earthquakes and volcanoes happen where plates meet: moving apart, pushing together, or sliding past. The pattern can be stated without a map -- at the edges, not in the middle of a plate. One line on the cause (heat inside the Earth drives the motion) and stop; don't pick a favourite convection diagram, and don't use a particular disaster as a case study."
     },
@@ -1363,7 +1363,7 @@
       "archetype": "micro-lesson",
       "level": "younger",
       "safe_for": "all",
-      "notes": "Angles on a straight line add to 180 degrees. Angles inside a triangle add to 180 degrees. A right angle is 90. One numerical example of each, described rather than drawn. No circle theorems and no trigonometry. Pythagoras also uses a right angle, but it finds a side length; this deck only finds a missing angle."
+      "notes": "Purely numerical, no figure: angles on a straight line add to 180 degrees (e.g. 110 and ?), angles inside a triangle add to 180 degrees (e.g. 50, 60 and ?), a right angle is 90. One worked number example of each, no drawing. No circle theorems and no trigonometry. Pythagoras also uses a right angle, but it finds a side length; this deck only finds a missing angle."
     },
     {
       "subject": "English / Literature",
@@ -1390,7 +1390,7 @@
       "archetype": "micro-lesson",
       "level": "younger",
       "safe_for": "all",
-      "notes": "A simile compares with 'like' or 'as'. A metaphor says one thing is the other. Personification gives a non-human thing a human action. The test for all three: could this literally happen? Three invented sentences, no set text. Tone vs. mood is about attitude and feeling, not about a comparison. Don't add allegory or pathetic fallacy -- courses don't agree on those labels."
+      "notes": "A simile compares two things using 'like' or 'as' -- the test is simply whether it makes an explicit like/as comparison (a simile can even be literally true). A metaphor says one thing is the other; personification gives a non-human thing a human action -- for those two, the test is 'could this literally happen?' (it couldn't). Three invented sentences, no set text. Don't add allegory or pathetic fallacy -- courses don't agree on those labels."
     },
     {
       "subject": "History",
@@ -1433,7 +1433,7 @@
       "topic": "Urbanisation is not the same as a city growing",
       "slug": "urbanisation-vs-urban-growth",
       "archetype": "micro-lesson",
-      "level": "upper",
+      "level": "younger",
       "safe_for": "all",
       "notes": "Urban growth means a town or city getting bigger. Urbanisation means the percentage of a country's people who live in towns and cities going up. A city can grow while urbanisation stays flat, if the countryside grows just as fast. Definitions with invented numbers only -- no country rankings and no policy about where people ought to live."
     },
@@ -1460,7 +1460,7 @@
       "topic": "Site vs. situation: two reasons a town is there",
       "slug": "site-vs-situation",
       "archetype": "micro-lesson",
-      "level": "upper",
+      "level": "younger",
       "safe_for": "all",
       "notes": "Site is the ground under a settlement: flat, dry, near fresh water, or a hill that once helped defence. Situation is where it sits relative to other places: a river crossing on the road between two towns. A good site and a useful situation are different reasons. Generic or historical, not a modern city's politics."
     },
@@ -1516,7 +1516,7 @@
       "archetype": "micro-lesson",
       "level": "younger",
       "safe_for": "all",
-      "notes": "To negate a verb, ne goes before it and pas after: je ne parle pas. Before a vowel, ne becomes n'. In everyday speech the ne is often dropped; say that once, and keep both parts in the written form this deck teaches. Don't work through ne ... jamais, ne ... rien, and ne ... personne. Tu vs. vous is a separate deck."
+      "notes": "To negate a verb, ne goes before it and pas after: je ne parle pas. Before a vowel or a silent h, ne becomes n' (je n'aime pas, il n'habite pas ici). In everyday speech the ne is often dropped; say that once, and keep both parts in the written form this deck teaches. Don't work through ne ... jamais, ne ... rien, and ne ... personne. Tu vs. vous is a separate deck."
     },
     {
       "subject": "Spanish",
@@ -1552,7 +1552,7 @@
       "archetype": "technique",
       "level": "both",
       "safe_for": "all",
-      "notes": "Cognitive-science-backed study-skills concept (not curriculum content, so 'safe_for: all' by construction) -- pairs naturally with Memora's active-recall-based tools."
+      "notes": "The *why*, not the *how*: re-reading makes material feel familiar, and familiarity is easily mistaken for being able to recall it (a well-established metacognition finding). Stop at the diagnosis and one quick self-test (close the notes and try to explain it). Leave retrieval techniques to the active-recall deck."
     },
     {
       "subject": "Study skills",
@@ -1561,7 +1561,7 @@
       "archetype": "technique",
       "level": "both",
       "safe_for": "all",
-      "notes": "Well-established learning-science distinction, universal, directly relevant to Flashcards/Quizzes without being a direct product pitch."
+      "notes": "The *how*: practical ways to switch from passive review (re-reading, highlighting) to retrieval (self-quizzing, flashcards, blurting, explaining from memory), and why retrieval strengthens memory (the testing effect). Don't re-explain why re-reading feels productive -- that's the fluency-illusion deck. Relevant to Flashcards/Quizzes without being a direct product pitch."
     },
     {
       "subject": "Study skills",
