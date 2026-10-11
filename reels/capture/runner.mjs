@@ -3,7 +3,7 @@
 // Usage: DEMO_PASSWORD=... node runner.mjs reel.json
 import { chromium } from 'playwright'; import fs from 'fs'; import { execFileSync } from 'child_process';
 const reel = JSON.parse(fs.readFileSync(process.argv[2] || 'reel.json', 'utf8'));
-const BASE = reel.base || 'http://localhost:3000', OUT = `out/${reel.name}`, SPEED = reel.speed || { normal: 11, fast: 3 };
+const BASE = reel.base || 'http://localhost:3000', OUT = `out/${reel.name}`, SPEED = { normal: 11, fast: 3, x: 5, ...(reel.speed || {}) };
 const { w: W, h: H } = reel.viewport || { w: 1320, h: 860 };
 const T = Date.now(); fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT + '/frames', { recursive: true });
 
@@ -31,13 +31,19 @@ const p = await ctx.newPage(); const cdp = await ctx.newCDPSession(p); await cdp
 p.setDefaultTimeout(600000);
 
 let K = 1, rb = Date.now(), vb = 0; const vt = () => vb + (Date.now() - rb) / 1000 / K;
+// Output clock. vt() is the virtual clock the page and the proxy share (it only slows the app down so capture is smooth;
+// it never changes how fast things look). ot() is the finished clip's timeline: it runs F× faster than vt() while a
+// `speed: fast` step is active, so sped-up stretches really are shorter in the clip. Frames and events are stamped with ot().
+const oseg = [{ v0: 0, o0: 0, F: 1 }];
+const ot = v => { let g = oseg[0]; for (let i = oseg.length - 1; i >= 0; i--) if (v >= oseg[i].v0 - 1e-9) { g = oseg[i]; break; } return g.o0 + (v - g.v0) / g.F; };
+const setF = F => { const v = vt(); oseg.push({ v0: v, o0: ot(v), F }); };
 const applyK = () => Promise.all([p.evaluate(k => window.__setK && window.__setK(k), K).catch(() => {}),
   cdp.send('Animation.setPlaybackRate', { playbackRate: 1 / K }).catch(() => {})]);
 const setK = async k => { vb = vt(); rb = Date.now(); K = k; await Promise.all([applyK(), fetch(BASE + '/__k?k=' + k).catch(() => {})]); };
 p.on('load', () => { applyK(); });
 const sleep = ms => new Promise(r => setTimeout(r, ms * K));
 const frames = [], events = []; let rec = false, loopP;
-const ev = (type, extra = {}) => { const t = +vt().toFixed(4); events.push({ type, t, K, ...extra }); console.log(type, t.toFixed(2), `K=${K}`, `real ${((Date.now() - T) / 1000).toFixed(0)}s`); };
+const ev = (type, extra = {}) => { const t = +ot(vt()).toFixed(4); events.push({ type, t, K, ...extra }); console.log(type, t.toFixed(2), `K=${K}`, `real ${((Date.now() - T) / 1000).toFixed(0)}s`); };
 const box = async l => { const bb = await l.boundingBox(); return bb && { x: bb.x, y: bb.y, w: bb.width, h: bb.height }; };
 const loc = t => t.css ? p.locator(t.css).first() : t.role ? p.getByRole(t.role, { name: new RegExp(t.name) }).first() : p.getByText(t.text).first();
 const rnd = (a, c) => a + Math.random() * (c - a);
@@ -52,9 +58,9 @@ const ensureVisible = async l => { const bb = await box(l); if (!bb || (bb.y >= 
   ev('scroll', { dy, ms: 900, auto: true }); await steppedScroll(dy, Math.min(1300, 600 + Math.abs(dy) * 0.9), page); await sleep(250); };
 const moveTo = async l => { await ensureVisible(l); const bb = await box(l); await p.mouse.move(bb.x + bb.w / 2, bb.y + bb.h / 2, { steps: 15 }); return bb; };
 const shot = async t => { const buf = await p.screenshot({ type: 'jpeg', quality: 90, scale: 'device', caret: 'initial', animations: 'allow' });
-  const fn = String(frames.length).padStart(5, '0') + '.jpg'; fs.writeFileSync(`${OUT}/frames/${fn}`, buf); frames.push({ fn, t: +t.toFixed(4), K }); };
+  const fn = String(frames.length).padStart(5, '0') + '.jpg'; fs.writeFileSync(`${OUT}/frames/${fn}`, buf); frames.push({ fn, t: +ot(t).toFixed(4), K }); };
 const startLoop = () => { rec = true; loopP = (async () => { while (rec) { const a = vt(); const buf = await p.screenshot({ type: 'jpeg', quality: 90, scale: 'device', caret: 'initial', animations: 'allow' });
-  const t = (a + vt()) / 2, fn = String(frames.length).padStart(5, '0') + '.jpg'; fs.writeFileSync(`${OUT}/frames/${fn}`, buf); frames.push({ fn, t: +t.toFixed(4), K }); } })(); };
+  const t = ot((a + vt()) / 2), fn = String(frames.length).padStart(5, '0') + '.jpg'; fs.writeFileSync(`${OUT}/frames/${fn}`, buf); frames.push({ fn, t: +t.toFixed(4), K }); } })(); };
 const stopLoop = async () => { rec = false; await loopP; };
 // Frame-stepped scroll: pause free-running capture, then for each 1/30 s set the exact eased scroll position,
 // wait two animation frames so the page has fully painted, and take exactly one screenshot. No sampling → no judder/tearing.
@@ -73,7 +79,8 @@ const steppedScroll = async (dy, ms, page) => {
 
 const steps = {
   pause: async s => sleep(s.ms),
-  speed: async s => { await setK(SPEED[s.k] ?? s.k); },
+  // speed: fast compresses the clip by s.x (default SPEED.x, 5x) and lowers the slow-down so capture stays quick; normal restores both.
+  speed: async s => { const F = s.k === 'normal' ? 1 : Math.max(1, s.x ?? SPEED.x); setF(F); await setK(SPEED[s.k] ?? s.k); ev('speed', { k: s.k, F }); },
   mark: async () => {},
   hover: async s => { const l = loc(s.target); await l.waitFor(); await moveTo(l); },
   click: async s => { const l = loc(s.target); await l.waitFor(); const bb = await moveTo(l); await sleep(s.dwell ?? 220);
@@ -83,7 +90,7 @@ const steps = {
       await Promise.race([p.waitForURL(re).catch(() => {}), sleep(1500)]);
       if (!re.test(p.url()) && href) { ev('nav_fallback', { href }); await p.goto(BASE + href); } } },
   type: async s => { const keys = [];
-    for (const ch of s.text) { await p.keyboard.type(ch); keys.push(+vt().toFixed(4));
+    for (const ch of s.text) { await p.keyboard.type(ch); keys.push(+ot(vt()).toFixed(4));
       let d = rnd(32, 62); if (ch === ' ') d += rnd(40, 110); if (',—-/.'.includes(ch)) d += rnd(120, 220); if (ch !== ' ' && Math.random() < 0.04) d += rnd(150, 260);
       await sleep(d); }
     ev('keys', { times: keys, text: s.text }); },

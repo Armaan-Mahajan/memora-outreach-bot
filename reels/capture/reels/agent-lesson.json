@@ -37,6 +37,11 @@
    "as": "generate"
   },
   {
+   "do": "speed",
+   "k": "fast",
+   "x": 4
+  },
+  {
    "do": "wait",
    "for": {
     "css": "[role=dialog]"
@@ -52,6 +57,10 @@
     }
    },
    "mark": "outline_done"
+  },
+  {
+   "do": "speed",
+   "k": "normal"
   },
   {
    "do": "pause",

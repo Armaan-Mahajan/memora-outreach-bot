@@ -1,5 +1,5 @@
 {
- "_doc": "Reels pipeline config. The Supabase URL and publishable key are memora-web's PUBLIC browser values (they ship in the site's JavaScript); the demo password and ElevenLabs key are NOT here \u2014 run.sh takes them from the environment.",
+ "_doc": "Reels pipeline config. The Supabase URL and publishable key are memora-web's PUBLIC browser values (they ship in the site's JavaScript); the demo password and ElevenLabs key are NOT here — run.sh takes them from the environment.",
  "memora_web": {
   "repo": "https://github.com/Armaan-Mahajan/memora-web.git",
   "branch": "demo-recording-mode-v2"
@@ -17,7 +17,7 @@
    "composition": "Course",
    "output": "memora-reel-agent-course.mp4",
    "seconds": [
-    30,
+    25,
     45
    ]
   },
@@ -29,8 +29,8 @@
    "composition": "CourseLesson",
    "output": "memora-reel-agent-lesson.mp4",
    "seconds": [
-    45,
-    60
+    35,
+    55
    ]
   },
   {

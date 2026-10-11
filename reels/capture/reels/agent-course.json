@@ -37,6 +37,11 @@
    "as": "generate"
   },
   {
+   "do": "speed",
+   "k": "fast",
+   "x": 4
+  },
+  {
    "do": "wait",
    "for": {
     "css": "[role=dialog]"
@@ -52,6 +57,10 @@
     }
    },
    "mark": "outline_done"
+  },
+  {
+   "do": "speed",
+   "k": "normal"
   },
   {
    "do": "pause",
@@ -148,7 +157,7 @@
   {
    "do": "wait",
    "for": {
-    "css": "#content-viewer >> text=\"2.1 – The Calvin Cycle\""
+    "css": "#content-viewer >> text=\"2.1 \u2013 The Calvin Cycle\""
    },
    "cut": true,
    "settle": 900
@@ -181,7 +190,7 @@
   {
    "do": "wait",
    "for": {
-    "css": "#content-viewer >> text=\"3.1 – Photorespiration\""
+    "css": "#content-viewer >> text=\"3.1 \u2013 Photorespiration\""
    },
    "cut": true,
    "settle": 900

@@ -143,8 +143,10 @@ export const Reel: React.FC<{ variant?: string; footage?: string }> = ({ variant
   const intro = interpolate(t, [introAt, introAt + 0.45], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const CH = V.chrome ? 54 : 0;   // browser title-bar height
   const rel = (type: string, i = 0) => { const e = evs.filter(e => e.type === type)[i]; return e ? e.t - t0 : null; };
-  const spedA = rel('sped_up_start'), genDone = rel('course_gen_done');
-  const chip = spedA != null && genDone != null ? interpolate(t, [spedA - 0.15, spedA + 0.15, genDone - 0.1, genDone + 0.2], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 0;
+  // "Sped up" windows: from each speed event with F > 1 to the next speed event (the recorder compresses the clip in between)
+  const spd = evs.filter(e => e.type === 'speed');
+  const sped: [number, number][] = spd.flatMap((e, i) => e.F > 1 ? [[e.t - t0, Math.max(e.t + 0.3, spd[i + 1]?.t ?? evs[evs.length - 1].t) - t0] as [number, number]] : []);
+  const chip = Math.max(0, ...sped.map(([a, b]) => interpolate(t, [a - 0.15, a + 0.15, b - 0.1, b + 0.2], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })));
   const keyTimes: number[] = (evs.find(e => e.type === 'keys')?.times || []).map((k: number) => k - t0);
   const allKeys: number[] = evs.filter(e => e.type === 'keys').flatMap(e => e.times || []).map((k: number) => k - t0);
   // step-tracker mark spec: "event", "click:<target>", optional "+0.3" / "-0.7" offset
@@ -258,7 +260,7 @@ export const Reel: React.FC<{ variant?: string; footage?: string }> = ({ variant
             border: `3px solid ${VIOLET_L}`, background: `${VIOLET_L}22`, opacity: 0.85 * (1 - k) }} />; })()}
         <div style={{ position: 'absolute', left: px(cur.x) - 2, top: py(cur.y) - 2, opacity: cur.opacity }}><Arrow size={size} /></div>
       </div>
-      {/* "Sped up" chip: shown whenever playback is faster than reality (course generation: ~30–40 s real) */}
+      {/* "Sped up" chip: shown exactly while the clip is compressed (speed: fast steps in the capture script) */}
         <div style={{ position: 'absolute', top: top - CH - 72, right: CX + 6, opacity: chip, transform: `translateY(${(1 - chip) * -10}px)`, display: 'flex', alignItems: 'center', gap: 12,
           padding: '12px 22px', borderRadius: 999, background: 'rgba(16,16,20,.85)', border: '1.5px solid #ffffff2e', color: '#fff', fontSize: 30, fontWeight: 600 }}><FF />Sped up</div>
       <Captions t={t} y={V.capY} phrases={phrases} lower={V.kind === 'cinematic'} />
