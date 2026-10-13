@@ -27,7 +27,7 @@ export const AppWindow: React.FC<{ R: Resolved; id: string; layout?: WindowLayou
   const f = useCurrentFrame(); const { fps } = useVideoConfig(); const s = seg(R, id);
   if (s.kind !== 'footage') throw new Error(`AppWindow needs a footage segment, "${id}" is a ${s.kind}`);
   const D = useDirection(R, w, hMax);
-  const clipT = (s.clipIn ?? 0) + f / fps, cf = Math.max(0, Math.min(D.cam.length - 1, Math.round(clipT * fps)));
+  const rate = s.rate ?? 1, clipT = (s.clipIn ?? 0) + f / fps * rate, cf = Math.max(0, Math.min(D.cam.length - 1, Math.round(clipT * fps)));
   const cam = D.cam[cf], cur = D.cursor[cf];
   const h = cam.h, top = midY - h / 2, X = (1080 - w) / 2, CH = chrome ? 54 : 0;
   const tx = w / 2 - cam.cx * cam.s, ty = h / 2 - cam.cy * cam.s;
@@ -53,7 +53,7 @@ export const AppWindow: React.FC<{ R: Resolved; id: string; layout?: WindowLayou
       boxShadow: `0 0 0 1.5px ${C.lineSoft}`, opacity: k, transform: `scale(${0.97 + 0.03 * k})` }}>
       {/* capture is 2× (2640×1720): scale s/2 so 1 page px = s window px */}
       <div style={{ position: 'absolute', left: 0, top: 0, width: PAGE.w * 2, height: PAGE.h * 2, transformOrigin: '0 0', transform: `translate(${tx}px, ${ty}px) scale(${cam.s / 2})` }}>
-        {startFrom + f < clipFrames - 1 ? <OffthreadVideo src={staticFile(R.footage.clip)} startFrom={startFrom} style={{ width: PAGE.w * 2, height: PAGE.h * 2 }} muted />
+        {startFrom + f * rate < clipFrames - 1 ? <OffthreadVideo src={staticFile(R.footage.clip)} startFrom={startFrom} playbackRate={rate} style={{ width: PAGE.w * 2, height: PAGE.h * 2 }} muted />
           : <Freeze frame={clipFrames - 2}>{video}</Freeze>}
       </div>
       {ripple && (() => { const q = (clipT - ripple.t) / 0.45, r = 10 + 38 * (1 - Math.pow(1 - q, 3));

@@ -152,7 +152,7 @@ const steppedScroll = async (dy, ms, page) => {
     if (!page) { const els = [...document.querySelectorAll('*')].filter(e => { const o = getComputedStyle(e).overflowY; return (o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight + 50; });
       el = els.sort((a, c) => c.clientHeight - a.clientHeight)[0] || el; }
     window.__sEl = el; window.__sY0 = el.scrollTop; }, !!page);
-  const k = Math.max(1, Math.round(ms / 1000 * FPS));
+  const k = Math.max(1, Math.round(ms / 1000 * FPS / rate));   // in a sped-up stretch scrolls are sped up too
   for (let i = 1; i <= k; i++) {
     await p.evaluate(([dy, u]) => { const e = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; window.__sEl.scrollTop = window.__sY0 + dy * e(u); }, [dy, i / k]);
     await frame(true); } };
@@ -168,12 +168,12 @@ const ensureVisible = async l => { const bb = await box(l); if (!bb || (bb.y >= 
 // on the same schedule the edit's drawn cursor uses: Fitts-law travel time, sine ease, arriving before the click.
 const travel = d => Math.min(0.7, 0.25 + 0.12 * Math.log2(1 + d / 60)) * 1000;
 const glide = async (x, y) => { const x0 = mx, y0 = my, d = Math.hypot(x - x0, y - y0); if (d < 1) return;
-  const k = Math.max(2, Math.round(travel(d) / (DT * rate)));   // in a sped-up stretch the hand moves faster too
+  const k = Math.max(rate > 1 ? 1 : 2, Math.round(travel(d) / (DT * rate)));   // in a sped-up stretch the hand moves faster too
   for (let i = 1; i <= k; i++) { const u = (1 - Math.cos(Math.PI * i / k)) / 2; mx = x0 + (x - x0) * u; my = y0 + (y - y0) * u; await p.mouse.move(mx, my); await frame(true); } };
 const moveTo = async (l, what = 'target') => { await until(visible(l), `${what} to appear`, 20000); await ensureVisible(l); const bb = await box(l); await glide(bb.x + bb.w / 2, bb.y + bb.h / 2); return bb; };
 // navigate without blocking: responses only arrive as virtual time moves, so keep stepping until the URL changes
 const nav = async (to, re) => { navPending = true; p.goto(to, { waitUntil: 'commit' }).catch(() => {}); await until(async () => re.test(p.url()), to, 30000); await freezeAnims(); };
-const press = async () => { await p.mouse.down(); await frame(); await frame(); await p.mouse.up(); await frame(); };
+const press = async () => { await p.mouse.down(); await frame(); if (rate === 1) await frame(); await p.mouse.up(); await frame(); };   // 3 frames, 2 when sped up
 
 const steps = {
   pause: async s => holdMs(s.ms),

@@ -22,7 +22,8 @@ A planned reel is a folder `~/reels-run/plans/<slug>/`:
  "seconds": [25, 45],                      // the final length must land inside (15-60)
  "timeline": [
   {"id": "hook", "kind": "scene", "dur": 2.8},                                   // a designed scene, fixed length
-  {"id": "run",  "kind": "footage", "from": "deck_open-0.3", "to": "ff_end+0.5"} // a slice of the recording between two anchors
+  {"id": "run",  "kind": "footage", "from": "ff_start", "to": "ff_end", "max": 4}  // a slice of the recording between two anchors;
+                                                                                 // "max": at most 4 reel seconds (plays faster to fit, ≤ 6×)
  ],
  "beats": [{"ev": "results_open", "region": {"x": 300, "y": 120, "w": 720, "h": 520}}],   // optional camera framing
  "vo": {"voice": "Belle B", "lines": [
@@ -34,6 +35,9 @@ A planned reel is a folder `~/reels-run/plans/<slug>/`:
 ```
 **Anchors** name a moment in the recording: `rec_start`, `rec_end`, any `mark` you put on a capture step, or `click:<as>`;
 then optional `#n` (n-th occurrence) and `+s`/`-s`. `resolve_plan.py` lists the known anchors when one is wrong.
+**`max`** caps a footage segment's length: a longer slice plays faster to fit (frames dropped, up to 6×; beyond that `check` fails —
+record that stretch faster with `speed` instead). Use it for fast-forwards; combine with `speed: fast` (x 8-12) in the capture so
+little needs dropping.
 **Voice**: 2-10 lines, ≤ 600 characters. Overlapping lines are pushed later; if the words outrun the picture the last segment is
 held up to 3 s, beyond that `check` fails: cut words or lengthen a segment. Every reel keeps ≥ 1 s of picture after the last word.
 **Beats** (optional): `region` is a page box in the 1320×860 viewport, `"WIDE"`, or `"click"`; the automatic camera already
@@ -62,6 +66,10 @@ export default function Reel({ R }: { R: Resolved }) {
   "Sped up" chip (shown exactly while the recording ran fast). `layout`: `w` (920), `midY` (950), `hMax` (1100), `chrome`, `url`, `glow`.
 - `Ground` (`dots` | `grid` | `cross` | `plain`), `Glow`, `Grad` (gradient text), `Panel`, `Logo`, `Steps` (step tracker).
 - Motion: `useT()`, `enter(t, start, dur)`, `exit(t, end, dur)`, `typed(text, t, start, cps)`, `rand(seed)`, `easeOut`, `easeInOut`.
+- `RunProgress` — a progress bar in the app's style pinned at the top of the reel, counting the recording's own clicks:
+  `<RunProgress R={R} count={['correct','incorrect']} total={10} label="…" tally={{ correct: '✓', incorrect: '✗' }} />` (top level,
+  not inside a `<Seg>`; it shows while those clicks are on screen). Don't put another label at the top while it shows.
+- Click and typing sounds are automatically silent while the recording ran sped up.
 - `mark(R, 'results_open')` = reel time of a recording event (to sync scene graphics with the footage).
 - `ReelShell` props: `captions={{ y, variant: 'pill' | 'lower' }}` or `false` (only if the words are shown another way);
   `sfx=[{ at, kind: 'click'|'key'|'done'|'whoosh' }]` in reel seconds (clicks and typing in footage already have sound).

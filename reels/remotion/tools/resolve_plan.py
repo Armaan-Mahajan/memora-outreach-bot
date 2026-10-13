@@ -53,14 +53,22 @@ for s in plan['timeline']:
     elif s['kind'] == 'footage':
         a, b = max(0.0, anchor(s['from'])), min(clip_dur, anchor(s['to']))
         if b - a < 0.5: die(f'footage "{sid}" is {b - a:.2f}s long ({s["from"]} → {s["to"]})')
-        segs.append({'id': sid, 'kind': 'footage', 'start': round(t, 3), 'end': round(t + b - a, 3), 'clipIn': round(a, 3), 'clipOut': round(b, 3)}); t += b - a
+        # "max": the segment may take at most this many reel seconds — a longer slice plays faster (frames dropped) to fit
+        mx = s.get('max'); rate = 1.0
+        if mx is not None:
+            if not 1 <= float(mx) <= 30: die(f'footage "{sid}" max {mx}s outside 1-30 s')
+            rate = max(1.0, (b - a) / float(mx))
+            if rate > 6: die(f'footage "{sid}" is {b - a:.1f}s of recording for max {mx}s: {rate:.1f}x would be a blur (max 6x) — record it faster (speed x) or shorten the slice')
+        seg = {'id': sid, 'kind': 'footage', 'start': round(t, 3), 'end': round(t + (b - a) / rate, 3), 'clipIn': round(a, 3), 'clipOut': round(b, 3)}
+        if rate > 1: seg['rate'] = round(rate, 4)
+        segs.append(seg); t += (b - a) / rate
     else: die(f'segment "{sid}" kind must be scene or footage')
 total = t
 if not any(s['kind'] == 'footage' for s in segs): die('the timeline shows no app footage: every reel must show the real app')
 
 def clip_to_reel(ct):
     for s in segs:
-        if s['kind'] == 'footage' and s['clipIn'] - 1e-6 <= ct <= s['clipOut'] + 1e-6: return s['start'] + ct - s['clipIn']
+        if s['kind'] == 'footage' and s['clipIn'] - 1e-6 <= ct <= s['clipOut'] + 1e-6: return s['start'] + (ct - s['clipIn']) / s.get('rate', 1)
     return None
 
 marks = {}
@@ -109,7 +117,7 @@ hold = round(max(0.0, (prev_end or 0) + TAIL - total), 3)
 if hold > MAX_HOLD: die(f'voiceover ends {prev_end:.2f}s but the timeline is {total:.2f}s — would need a {hold:.1f}s hold (max {MAX_HOLD}); shorten the script or lengthen the timeline')
 if hold:
     segs[-1]['end'] = round(segs[-1]['end'] + hold, 3)
-    if segs[-1]['kind'] == 'footage': segs[-1]['clipOut'] = round(segs[-1]['clipOut'] + hold, 3)
+    if segs[-1]['kind'] == 'footage': segs[-1]['clipOut'] = round(segs[-1]['clipOut'] + hold * segs[-1].get('rate', 1), 3)
 
 # ── write ──
 shutil.copy(os.path.join(cap_dir, 'clip.mp4'), os.path.join(pub, 'clip.mp4'))
@@ -124,5 +132,5 @@ resolved = {'slug': slug, 'dur': round(total + hold, 3), 'hold': hold, 'segments
             'marks': marks, 'vo': {'lines': lines}, 'voDir': f'reels/{slug}/vo/'}
 json.dump(resolved, open(os.path.join(src, 'resolved.json'), 'w'), indent=1)
 print(f'  {slug}: {len(segs)} segments, {total:.2f}s + {hold:.2f}s hold = {total + hold:.2f}s')
-for s in segs: print(f'    {s["start"]:6.2f}–{s["end"]:6.2f}  {s["kind"]:7s} {s["id"]}' + (f'  (clip {s["clipIn"]:.2f}–{s["clipOut"]:.2f})' if s['kind'] == 'footage' else ''))
+for s in segs: print(f'    {s["start"]:6.2f}–{s["end"]:6.2f}  {s["kind"]:7s} {s["id"]}' + (f'  (clip {s["clipIn"]:.2f}–{s["clipOut"]:.2f}' + (f', {s["rate"]:.2f}x' if s.get('rate') else '') + ')' if s['kind'] == 'footage' else ''))
 for l in lines: print(f'    {l["at"]:6.2f}→{l["at"] + l["dur"]:6.2f}  "{l["text"]}"')

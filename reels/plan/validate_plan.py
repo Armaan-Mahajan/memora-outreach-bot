@@ -25,5 +25,10 @@ for i, l in enumerate(lines):
     if sum(k in l for k in ('at', 'end')) != 1: problems.append(f'vo.lines[{i}]: exactly one of "at" / "end"')
 total = sum(len(l.get('text', '')) for l in lines if isinstance(l, dict))
 if total > 600: problems.append(f'voiceover is {total} characters (max 600: it must fit the reel)')
+if p.get('feature') == 'adaptive' and isinstance(tl, list) and not any(x.get('kind') == 'footage' and isinstance(x.get('max'), (int, float)) and x['max'] <= 4 for x in tl):
+    problems.append('adaptive reels: the fast-forward footage segment needs "max": 4 or less (the run is never more than 4 s on screen)')
+for x in (tl or []):
+    if isinstance(x, dict) and 'max' in x and not (x.get('kind') == 'footage' and isinstance(x['max'], (int, float)) and 1 <= x['max'] <= 30):
+        problems.append(f'segment "{x.get("id")}": "max" (1-30 s) is only for footage segments')
 if problems: print('PLAN INVALID'); [print('  - ' + x) for x in problems]; sys.exit(1)
 print(f'plan ok ({p["feature"]}, voice {vo["voice"]}, {len(lines)} lines, {total} chars)')

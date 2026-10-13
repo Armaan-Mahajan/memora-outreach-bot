@@ -8,4 +8,5 @@ export * from './AppWindow';
 export * from './Captions';
 export * from './Audio';
 export * from './Shell';
+export * from './Progress';
 export { AbsoluteFill, Sequence, Img, interpolate, spring, useCurrentFrame, useVideoConfig, staticFile } from 'remotion';
