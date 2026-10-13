@@ -43,7 +43,7 @@ Usage, a real post (chunk-upload, one call per image, in slide order):
     --content content.json --asset-urls url1 [url2 ...] \\
     --notes "optional Stage 3/7 flags"
 
-  Prints one JSON object: {"sql": "insert into outreach_drafts ... ;"}. The orchestrator runs this once via execute_sql to actually queue the draft. format/feature/archetype/layout/topic map straight onto the outreach_drafts columns -- format must be exactly one of single_image / slideshow / reel (the table's CHECK constraint; note the underscore, not a hyphen), and format + feature are NOT NULL on the real table (confirmed 2026-09-04's capability test).
+  Prints plain SQL (not JSON): one guarded INSERT that the orchestrator runs exactly as printed via execute_sql to queue the draft. It returns the new row only if every value reached the database unchanged (an md5 guard per column); no row back means nothing was inserted. format/feature/archetype/layout/topic map straight onto the outreach_drafts columns -- format must be exactly one of single_image / slideshow / reel (the table's CHECK constraint; note the underscore, not a hyphen), and format + feature are NOT NULL on the real table (confirmed 2026-09-04's capability test).
 """
 import argparse
 import base64
@@ -74,6 +74,34 @@ def sql_jsonb(obj) -> str:
     if obj is None:
         return "NULL"
     return sql_string(json.dumps(obj)) + "::jsonb"
+
+
+def md5_hex(value) -> str:
+    """md5 of a value's UTF-8 text, '' for None -- the same thing Postgres's md5(coalesce(x, '')) computes."""
+    return hashlib.md5(("" if value is None else str(value)).encode("utf-8")).hexdigest()
+
+
+def guarded_insert(table: str, text_cols: dict, casts: dict, returning: str) -> str:
+    """An INSERT that only goes through if every value reached the database exactly as written here.
+
+    The orchestrator copies this SQL into execute_sql by hand. If anything in a caption, headline or content_json changes on
+    the way (an apostrophe, emoji, a non-breaking space, a decoded escape), the md5 guard doesn't match and NOTHING is
+    inserted: the statement returns no row instead of quietly queueing altered text. text_cols maps column -> text value
+    (None allowed); casts maps column -> SQL type to cast the text to (jsonb, text[]) at insert time.
+    """
+    names = list(text_cols)
+    values = ", ".join(sql_string(text_cols[c]) for c in names)
+    guard = "\n  and ".join(f"md5(coalesce(v.{c}, '')) = '{md5_hex(text_cols[c])}'" for c in names)
+    selected = ", ".join(f"v.{c}::{casts[c]}" if c in casts else f"v.{c}" for c in names)
+    return (f"with v ({', '.join(names)}) as (\n  values ({values})\n)\n"
+            f"insert into {table} ({', '.join(names)})\nselect {selected}\nfrom v\nwhere {guard}\nreturning {returning};")
+
+
+def pg_text_array(values) -> str | None:
+    """A text[] value written as a Postgres array literal ('{"a","b"}'), so it can travel as one guarded text value."""
+    if not values:
+        return "{}"
+    return "{" + ",".join('"' + str(v).replace("\\", "\\\\").replace('"', '\\"') + '"' for v in values) + "}"
 
 
 def _resolve_supabase_url(args):
@@ -228,16 +256,10 @@ def cmd_render_request_sql(args):
     with open(args.content) as f:
         content = json.load(f)
 
-    columns = {
-        "kind": sql_string(args.kind),
-        "layout": sql_string(args.layout),
-        "content": sql_jsonb(content),
-    }
-    col_names = ", ".join(columns.keys())
-    col_values = ", ".join(columns.values())
-    sql = f"insert into render_requests ({col_names})\nvalues ({col_values})\nreturning id;"
-
-    print(json.dumps({"sql": sql}, indent=2))
+    cols = {"kind": args.kind, "layout": args.layout, "content": json.dumps(content)}
+    # Plain SQL on stdout (no JSON wrapper to decode): run it exactly as printed. No row back = it was altered in transit,
+    # nothing was inserted -- see guarded_insert().
+    print(guarded_insert("render_requests", cols, {"content": "jsonb"}, "id"))
 
 
 def cmd_insert_sql(args):
@@ -247,27 +269,25 @@ def cmd_insert_sql(args):
     # feature is NOT NULL on the real table (confirmed 2026-09-04), but slideshow archetypes micro-lesson/technique aren't tied to any single feature the way single-image cards are. Rather than stuffing a topic slug into a column the dashboard may filter on as one of the four real features (agent/flashcards/quizzes/mora), default to the explicit sentinel "general" -- self-evidently not a real feature, so it can't be mistaken for one. The one archetype that DOES have a real feature tie-in, agent-output, should pass --feature agent explicitly.
     feature = args.feature or ("agent" if args.archetype == "agent-output" else "general")
 
-    columns = {
-        "format": sql_string(args.format),
-        "feature": sql_string(feature),
-        "status": sql_string("pending"),
-        "headline": sql_string(content.get("headline") or content.get("quote")),
-        "subhead": sql_string(content.get("subhead") or content.get("support")),
-        "caption": sql_string(args.caption or content.get("caption")),
-        "hashtags": sql_text_array(args.hashtags or content.get("hashtags") or []),
-        "content_json": sql_jsonb(content),
-        "asset_urls": sql_text_array(args.asset_urls),
-        "topic": sql_string(args.topic),
-        "archetype": sql_string(args.archetype),
-        "layout": sql_string(args.layout),
-        "notes": sql_string(args.notes),
+    cols = {
+        "format": args.format,
+        "feature": feature,
+        "status": "pending",
+        "headline": content.get("headline") or content.get("quote"),
+        "subhead": content.get("subhead") or content.get("support"),
+        "caption": args.caption or content.get("caption"),
+        "hashtags": pg_text_array(args.hashtags or content.get("hashtags") or []),
+        "content_json": json.dumps(content),
+        "asset_urls": pg_text_array(args.asset_urls),
+        "topic": args.topic,
+        "archetype": args.archetype,
+        "layout": args.layout,
+        "notes": (open(args.notes_file, encoding="utf-8").read().strip() or None) if args.notes_file else args.notes,
     }
-
-    col_names = ", ".join(columns.keys())
-    col_values = ", ".join(columns.values())
-    sql = f"insert into outreach_drafts ({col_names})\nvalues ({col_values})\nreturning id;"
-
-    print(json.dumps({"sql": sql}, indent=2))
+    # Plain SQL on stdout: run it exactly as printed. It returns the new row's id only if every value arrived unchanged;
+    # no row back means nothing was inserted (see guarded_insert()), so it's safe to re-run.
+    print(guarded_insert("outreach_drafts", cols, {"hashtags": "text[]", "content_json": "jsonb", "asset_urls": "text[]"},
+                         "id, status, asset_urls"))
 
 
 def main():
@@ -311,6 +331,7 @@ def main():
     ins.add_argument("--hashtags", nargs="*", help="overrides content.json's hashtags field if given")
     ins.add_argument("--asset-urls", nargs="+", required=True, help="public_url values from chunk-upload's manifest.json, in slide order")
     ins.add_argument("--notes", help="Stage 3/7 flags to seed the notes column with")
+    ins.add_argument("--notes-file", help="read the notes from this text file instead (preferred: no shell quoting to get wrong)")
     ins.set_defaults(func=cmd_insert_sql)
 
     args = parser.parse_args()

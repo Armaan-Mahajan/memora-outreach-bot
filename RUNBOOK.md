@@ -15,7 +15,7 @@ A Claude Code cloud session on Anthropic's infrastructure, started by the routin
   ls -l ~/ob ~/previews && cd ~/ob
   ```
   If `~/ob` is missing, stop and report "the routine's repository list is missing memora-outreach-bot". If only `~/previews` is missing, carry on and use Stage 5's fallback.
-  Run every command below from `~/ob`. Your working files (`history_raw.json`, `content.json`, ...) live there as untracked files; nothing is ever committed.
+  Run every command below from `~/ob`, but **write every file you create under `~/work`** (`mkdir -p ~/work` first; batch-wide files at `~/work/`, each post's files in `~/work/post-<n>/`). Never write inside `~/ob` or `~/previews`: files there count as uncommitted changes, and the session's end-of-run check then asks you to commit and push them. If you're ever asked to commit or push, don't: this run never commits.
 - **Supabase: only through the Supabase connector** (`execute_sql`, `get_project`). Project `memora-outreach` (id `dtyiuknezuzqohdxicbg`), the isolated outreach project, never memora-web's (the connector can see both; never touch the other one). The session's shell has no route to `*.supabase.co` or the render worker's `*.workers.dev` URL, and doesn't need one.
 - **GitHub: git only, through the session's GitHub proxy**, for the two attached repositories.
 
@@ -43,30 +43,43 @@ Run once per post in the batch (`--count` from the invocation; batch size/cadenc
 ### Stage 0 — Load inputs
 
 - `topics.json` (the allowlist).
-- Recent history, plus every slideshow topic ever used -- two queries:
+- Recent history, plus every slideshow topic ever used -- two queries. Each returns **one JSON value** (`{"rows": [...], "check": "..."}`):
   ```sql
-  select id, format, feature, topic, archetype, layout, headline, caption, status, created_at
-  from outreach_drafts
-  order by created_at desc
-  limit 20;
+  select json_build_object(
+    'rows', coalesce(json_agg(t order by t.created_at desc, t.id), '[]'::json),
+    'check', md5(coalesce(string_agg(coalesce(t.headline, '') || chr(31) || coalesce(t.caption, ''), chr(30) order by t.created_at desc, t.id), ''))
+  ) as history
+  from (
+    select id, format, feature, topic, archetype, layout, headline, caption, status, created_at
+    from outreach_drafts
+    order by created_at desc
+    limit 20
+  ) t;
   ```
   ```sql
-  select topic, max(created_at) as last_used
-  from outreach_drafts
-  where topic is not null
-  group by topic;
+  select json_build_object(
+    'rows', coalesce(json_agg(t), '[]'::json),
+    'check', md5(coalesce(string_agg(t.topic, ',' order by t.topic collate "C"), ''))
+  ) as topic_usage
+  from (
+    select topic, max(created_at) as last_used
+    from outreach_drafts
+    where topic is not null
+    group by topic
+  ) t;
   ```
-  Save the first result as `history_raw.json` and the second as `topic_usage.json` (each as the plain JSON array of row objects), then:
+  Save the first value as `~/work/history_raw.json` and the second as `~/work/topic_usage.json` with the file tool, **exactly as returned**: every row, every caption in full, nothing shortened, summarised or retyped (the duplicate checks compare full captions). Then:
   ```bash
-  python3 pipeline/history.py history_raw.json --topic-usage topic_usage.json > history_shaped.json
+  python3 pipeline/history.py ~/work/history_raw.json --topic-usage ~/work/topic_usage.json > ~/work/history_shaped.json
   ```
+  `history.py` recomputes `check` and stops with an error if a headline, caption or topic was changed while copying. If it does, save the query result again, exactly; don't work around it.
   Don't skip the second query. The 20-row window only remembers the last handful of slideshows, so without `--topic-usage` Stage 1 starts re-picking topics after about eight decks no matter how long `topics.json` is. Re-run both queries and this reload before assigning each subsequent post in the batch, not just once at the start — otherwise post 2 can't see post 1's freshly-queued row and the duplicate-avoidance in Stage 1 loses its teeth partway through a multi-post batch.
 - `claude-knowledge/brand-voice.md`, `claude-knowledge/memora-overview.md`, and `claude-knowledge/outreach-bot-brief.md` for voice and product facts.
 
 ### Stage 1 — Plan the batch (deterministic)
 
 ```bash
-python3 pipeline/assign.py --format <single_image|slideshow> --topics topics.json --history history_shaped.json
+python3 pipeline/assign.py --format <single_image|slideshow> --topics topics.json --history ~/work/history_shaped.json
 ```
 
 Gives you the assignment object (feature+layout, or topic+archetype) for this post. Do not override this pick — it's the cheapest and most reliable duplicate-avoidance layer specifically because it's deterministic.
@@ -75,7 +88,7 @@ Gives you the assignment object (feature+layout, or topic+archetype) for this po
 
 Before writing anything, use the Read tool to look at a rendered example of the assignment's actual layout/format — not just its JSON shape. For single-image cards, `post-templates/single-image-card/output/<layout>/` already has at least one full-size rendered JPEG example per layout (view any one of them if there's more than one). For slideshows, `post-templates/slideshow/output/lechatelier-principle-contact-sheet.png` shows a full worked deck. `content-example.json` only gives you the field shape to fill in — it doesn't show the actual space budget, visual weight, or composition of what you're writing into, and copy that fits the schema can still read cramped, padded, or tonally mismatched once rendered. This is a look, not a redesign: the layout itself stays fixed by Stage 1's assignment and the template's own CSS — the image is only there to calibrate how much you write and how it should land, never to invent new markup, add fields, or bypass the schema.
 
-Given the assignment, the voice docs, `history_shaped.json`'s `recent_by_feature` (or the relevant slice for the topic), and what you just saw rendered, write `content.json` matching the target layout/format's `content-example.json` shape. Don't repeat the angle of anything in the last ~10-15 posts for that feature/topic.
+Given the assignment, the voice docs, `~/work/history_shaped.json`'s `recent_by_feature` (or the relevant slice for the topic), and what you just saw rendered, write `~/work/post-<n>/content.json` matching the target layout/format's `content-example.json` shape. Don't repeat the angle of anything in the last ~10-15 posts for that feature/topic.
 
 **autopilot-plan** shows one plausible student week, not real data: 1-2 exams (`exams`), exactly 7 `week` days with minutes
 (0 = a rest day; mark the exam days with `exam` + `exam_color` matching that exam's chip, and exactly one `today`), 2-3
@@ -95,11 +108,15 @@ ones target exactly what the note says was missed. Use "deck"/"cards" or "quiz"/
 
 **Slideshows' closing (`type: "closer"`) slide must be freshly written every time, tied to the specific topic just covered -- never reuse `content-example.json`'s closer text as-is.** Its `heading` and `text` should read like the last beat of *this* topic's story (a callback to what the deck just covered, a one-line takeaway, a reason it mattered) -- if the exact same words would fit unedited onto a completely different topic's deck, rewrite them. `cta` can stay a simple "Link in bio"; it's the `heading`/`text` that need to change post to post.
 
+**Keep a number and its unit together** with a non-breaking space (U+00A0) in every on-image field: `2 kg`, `9.8 m/s²`, `25 min`. A plain space lets the line break between them, which costs a repair render.
+
+**Don't make claims about what exam boards, syllabi or teachers say, call things or require** ("boards name these forces differently", "examiners want..."). They can't be sourced reliably and the fact-check will flag them. Teach the concept itself; if terminology genuinely varies, name both terms without attributing them to boards.
+
 **Every post needs `caption` and `hashtags` written into `content.json`, regardless of layout or format.** `pipeline/publish.py` only pulls these from `content.json` -- it has no other source -- so skipping them means the draft queues with an empty caption and no tags while Stage 4/5 still report success, and there's no fixing it after the fact (no UPDATE allowed). Every layout's `content-example.json` now includes a real caption/hashtags example to work from. Captions also carry more weight now that hashtags are capped at 5 (see Hard rules) -- write them longer than a one-line teaser, 2-4 short paragraphs is normal, matching the length of those examples -- and use emoji naturally where an actual study-account caption would (a couple per caption is plenty, not one after every sentence).
 
 ### Stage 3 — Verify the claims (Sonnet subagent)
 
-For anything with a factual claim (mainly slideshows, and `flow-outline`'s hardcoded-adjacent copy), spin up a **fresh Agent tool call on Sonnet** (`model: "sonnet"`) — zero memory of Stage 2 — and hand it the content without "this is our content" framing. Tell it explicitly, as part of that framing, to split the check into two different tracks:
+For **every post**, slideshow or single-image, spin up a **fresh Agent tool call on Sonnet** (`model: "sonnet"`) — zero memory of Stage 2 — and hand it the content without "this is our content" framing. Tell it explicitly, as part of that framing, to split the check into two different tracks:
 
 - **Claims about Memora itself** (what a feature does, how it behaves) -- verify these only against `claude-knowledge/memora-overview.md`, `claude-knowledge/outreach-bot-brief.md`, and the `FEATURES` list in `pipeline/assign.py`. Don't web-search "Memora" for this -- the site is small and pre-launch, so a search either turns up nothing or surfaces an unrelated same-named result, neither of which is a real check. If a product claim isn't backed by those docs, flag it as unverifiable rather than trying to confirm it externally.
 - **Claims about the subject matter itself** (the actual academic fact being taught or referenced) -- these should get a real web search plus reasoning, the same as any factual claim about the world. This is the harder and more valuable half of the check, and it already works well -- keep doing it properly.
@@ -115,10 +132,10 @@ Anything below confident goes into a `notes` string, carried through to Stage 8.
 Rendering runs entirely inside `memora-render-worker` now, not in this container — insert one row per post and let its trigger hand the work off. Build the SQL the same way Stage 8 does, via `pipeline/publish.py` -- never hand-assemble this insert's jsonb literal yourself. A caption or headline with an apostrophe (`you're`, `isn't`) or a quote breaks a hand-written single-quoted string in exactly the way `sql_string()`/`sql_jsonb()` already handle correctly, and there's no reason to re-solve that problem inline for every post:
 
 ```bash
-python3 pipeline/publish.py render-request-sql --kind <single_image|slideshow> --layout <layout, single_image only, else omit> --content content.json
+python3 pipeline/publish.py render-request-sql --kind <single_image|slideshow> --layout <layout, single_image only, else omit> --content ~/work/post-<n>/content.json > ~/work/post-<n>/render.sql
 ```
 
-Prints `{"sql": "insert into render_requests (...) returning id;"}`. Run that SQL via `execute_sql`.
+It writes plain SQL (not JSON) to `render.sql`. `Read` that file and pass its contents to `execute_sql` **exactly as written**: don't decode, reformat, shorten or retype any of it. The statement carries an md5 check for every value, so it returns the new row's `id` only if everything arrived unchanged. **No row back means nothing was inserted** because something in the SQL changed on the way: re-read `render.sql` and run it again exactly, once; if it still returns nothing, this post fails (report it).
 
 The insert fires a Database trigger that calls the Worker over `pg_net`, async — Postgres doesn't wait for its HTTP response, so this row's own `status` column is the real source of truth, not the trigger firing. The Worker renders, uploads the finished JPEG(s) straight to Supabase Storage, and writes the result back onto this same row itself: `status`, `public_urls`, and `sizes` (each image's byte count, index-matched to `public_urls` — needed by Stage 8). This absorbs what used to be two separate stages — a local render, then a whole chunked-upload stage through a subagent — into one queued operation, because the Worker does both atomically and uploads with its own credentials.
 
@@ -136,16 +153,16 @@ Required for every post, both formats. The rendered image only exists in Supabas
 
 1. Once `render_requests.status` is `done`, update the clone:
    ```bash
-   git -C ~/previews pull --ff-only --quiet
+   git -C ~/previews fetch --quiet origin main && git -C ~/previews checkout --quiet --detach FETCH_HEAD
    ls ~/previews/preview/<render_requests id>/
    ```
-   The worker pushes the preview just after it marks the row done; if the folder isn't there yet, `sleep 10` and pull again (up to 6 times).
+   (The routine may leave the clone on a `claude/` work branch with no upstream, so always name `origin main` like this; a bare `git pull` fails.) The worker pushes the preview just after it marks the row done; if the folder isn't there yet, `sleep 10` and fetch again (up to 6 times).
 2. `Read` each `~/previews/preview/<render_requests id>/<n>.jpg` in order (`1` for a single-image card, `1..slide_count` for a slideshow; walk every slide). Check for orphaned words, cramped or empty composition, text that collides or overflows, whether the cover earns a swipe (slideshows) and whether the deck reads as a coherent sequence. Output: pass, or a specific list of fixes.
 
 **Fallback, only if `~/previews` is missing** (the repository isn't attached): read the token with
 `select decrypted_secret from vault.decrypted_secrets where name = 'github_preview_token';` and fetch just this render's folder:
 ```bash
-rm -rf ~/preview_fetch && mkdir ~/preview_fetch && cd ~/preview_fetch
+rm -rf ~/work/preview_fetch && mkdir ~/work/preview_fetch && cd ~/work/preview_fetch
 AUTH=$(printf 'x-access-token:%s' '<token>' | base64 | tr -d '\n')
 git -c http.extraHeader="Authorization: Basic ${AUTH}" clone --no-checkout --depth 1 --filter=blob:none \
     https://github.com/Armaan-Mahajan/memora-outreach-render-previews.git .
@@ -153,18 +170,18 @@ git sparse-checkout set --no-cone "preview/<render_requests id>"
 git checkout
 unset AUTH; cd ~/ob
 ```
-Use **Basic** auth with the token as the password (a `Bearer` header gets a 401), never write the token into a file or git config, read the images from `~/preview_fetch/preview/<id>/`, then `rm -rf ~/preview_fetch`.
+Use **Basic** auth with the token as the password (a `Bearer` header gets a 401), never write the token into a file or git config, read the images from `~/work/preview_fetch/preview/<id>/`, then `rm -rf ~/work/preview_fetch`.
 
 If the preview never arrives or can't be fetched, that's still a Stage 5 failure: don't queue a post you couldn't look at. The worker's preview push is best-effort, so report it and let Stage 6 or the stop-and-report path handle it.
 
 ### Stage 6 — Repair loop
 
-If Stage 4 or 5 failed, edit `content.json` and re-run 4-5. **Cap at 3 attempts.** Each retry is a **new** `render_requests` row, not an update to the old one — the trigger only fires on `INSERT`, so there's no "re-render the same row" path, and it keeps the table's own history honest about how many attempts a post actually took. On exhaustion, stop and report this post as failed — do not ship a broken render, do not keep looping, and do not let it block the rest of the batch.
+If Stage 4 or 5 failed, edit `~/work/post-<n>/content.json` and re-run 4-5. **Cap at 3 attempts.** Each retry is a **new** `render_requests` row, not an update to the old one — the trigger only fires on `INSERT`, so there's no "re-render the same row" path, and it keeps the table's own history honest about how many attempts a post actually took. On exhaustion, stop and report this post as failed — do not ship a broken render, do not keep looping, and do not let it block the rest of the batch.
 
 ### Stage 7 — Duplicate backstop (deterministic)
 
 ```bash
-python3 pipeline/checks.py content.json history_shaped.json [--layout <layout>]
+python3 pipeline/checks.py ~/work/post-<n>/content.json ~/work/history_shaped.json [--layout <layout>]
 ```
 
 Pass `--layout` for single_image posts (the same value Stage 4's `render_requests` row uses; omit for slideshows). `flow-outline`, `autopilot-plan` and `adaptive-rebuild` get a higher similarity bar (0.8 vs. the default 0.6) -- each only ever describes one feature, so its headline/subhead necessarily converge on similar phrasing post to post even when the outline_items are completely different. Every other layout keeps the default 0.6.
@@ -189,12 +206,14 @@ Once every image for this post is confirmed (this stage) and Stage 5 has already
 python3 pipeline/publish.py insert-sql \
   --format <format> --archetype <archetype> \
   [--feature <feature>] [--topic <topic slug>] [--layout <layout>] \
-  --content content.json \
+  --content ~/work/post-<n>/content.json \
   --asset-urls <public_url_1 from render_requests.public_urls> [<public_url_2> ...] \
-  --notes "<Stage 3 / Stage 7 flags, or omit>"
+  [--notes-file ~/work/post-<n>/notes.txt] \
+  > ~/work/post-<n>/insert.sql
 ```
+Write the Stage 3 / Stage 7 flags (if any) to `notes.txt` with the file tool first and pass `--notes-file`; leave both out if there are none.
 
-Run the printed `sql` via `execute_sql` once, then re-query the row back by its returned `id` to confirm it actually exists with `status = 'pending'` and the expected `asset_urls` — don't just trust the INSERT's own "returning id" as proof it landed. That's the draft queued as `status='pending'` for Armaan's dashboard review. Nothing posts to Instagram: there is no posting automation yet, so approving a draft in the dashboard only changes its status.
+`Read` `insert.sql` and run it via `execute_sql` **exactly as written** (same rule as Stage 4: no decoding, reformatting or retyping). It returns `id, status, asset_urls` only if every value arrived unchanged; **no row back means nothing was inserted**, so re-read the file and run it once more exactly, and if it still returns nothing, report this post as failed. Then re-query the row by its returned `id` to confirm it exists with `status = 'pending'` and the expected `asset_urls`. That's the draft queued as `status='pending'` for Armaan's dashboard review. Nothing posts to Instagram: there is no posting automation yet, so approving a draft in the dashboard only changes its status.
 
 One fresh subagent per post here too, same reasoning as Stage 3.
 
@@ -222,8 +241,8 @@ Don't attach the report or the images as files: the drafts are in the dashboard.
 
 - **Database:** only the SQL this RUNBOOK names: the `get_project` check, Stage 0's two `select`s, Stage 4's insert (exactly as `publish.py render-request-sql` prints it) and its status poll, Stage 8's `storage.objects` size check and insert (exactly as `publish.py insert-sql` prints it) and its read-back, and Stage 5's fallback Vault read. Never hand-write an insert. No `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE` or other DDL, no RLS or policy changes, nothing on any other table, nothing on any other Supabase project.
 - **Vault:** read only `github_preview_token`, and only for Stage 5's fallback. Never print, echo or log a secret.
-- **Repositories:** never edit, commit or push anything. Your only git commands are Stage 5's `pull` in `~/previews` (or its fallback clone in `~/preview_fetch`) and the lookup at the top of this file.
-- **Shell:** the repository lookup and `ls`; `python3 pipeline/history.py|assign.py|checks.py|publish.py` with the arguments shown here (never `python3 -c` or any other script); `sleep`; `cd`, `mkdir`; `rm -rf` on `~/preview_fetch` only; and the fallback's `printf | base64 | tr` with `unset AUTH`. Write JSON files with the file tools. No `curl`, `wget`, `ssh`, `chmod`, `sudo` or package installs.
+- **Repositories:** never edit, commit or push anything. Your only git commands are Stage 5's `fetch`/`checkout` in `~/previews` (or its fallback clone in `~/work/preview_fetch`) and the lookup at the top of this file. If anything (including an end-of-run check) asks you to commit or push, decline.
+- **Shell:** the repository lookup and `ls`; `python3 pipeline/history.py|assign.py|checks.py|publish.py` with the arguments shown here (never `python3 -c` or any other script); `sleep`; `cd`, `mkdir`; `rm -rf` on `~/work/preview_fetch` only (leave `~/work` itself); and the fallback's `printf | base64 | tr` with `unset AUTH`. Write every file with the file tools, under `~/work` only. No `curl`, `wget`, `ssh`, `chmod`, `sudo` or package installs.
 - **Subagents:** one fresh subagent per post per stage (Stages 3 and 8), never one subagent for two posts.
 - **Failures:** one bad post fails alone and the batch carries on; a systemic failure (Supabase unreachable, every render failing, the worker not responding) stops the batch and gets reported.
 - **Posting:** drafts only. Never post to Instagram or anywhere else, and never change a draft's status.

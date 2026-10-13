@@ -4,10 +4,12 @@ Stage 0/1 support: shape raw outreach_drafts rows into the specific facts assign
 
 This script does NOT talk to Supabase itself -- MCP tool access (the execute_sql call that fetches these rows) is a property of the orchestrating Claude session, not of a plain Python subprocess, the same reason publish.py emits SQL for Claude to run rather than running it. The orchestrator's job is:
 
-    1. select id, format, feature, topic, archetype, layout, headline, caption, status, created_at from outreach_drafts order by created_at desc limit 20;
-    2. select topic, max(created_at) as last_used from outreach_drafts where topic is not null group by topic;
-    3. save each result as JSON (a list of row objects)
-    4. python3 pipeline/history.py <query-1-file.json> --topic-usage <query-2-file.json>
+    1. the 20 most recent outreach_drafts rows, and
+    2. every topic ever used with its last use --
+    both written in RUNBOOK.md Stage 0 as queries that return one JSON value, {"rows": [...], "check": "<md5>"}, so this
+    script can tell when a result was altered while being copied into a file (see load_checked()).
+    Save each value as JSON exactly as returned, then:
+    python3 pipeline/history.py <query-1-file.json> --topic-usage <query-2-file.json>
 
 Query 2 exists because query 1's 20-row window only remembers the last handful of slideshows -- on its own, Stage 1 would start re-picking topics after about eight decks no matter how long topics.json is.
 
@@ -27,7 +29,9 @@ Output (stdout): a JSON object --
 }
 """
 import argparse
+import hashlib
 import json
+import sys
 from collections import defaultdict
 
 MAX_RECENT_PER_FEATURE = 15
@@ -101,18 +105,36 @@ def shape(rows, topic_usage=None):
     return result
 
 
+def load_checked(path, what):
+    """Load a query result saved by the orchestrator, refusing one that was altered while it was copied out of execute_sql.
+
+    Stage 0's queries return one JSON value, {"rows": [...], "check": "<md5>"}, where check is computed by Postgres over the
+    text this pipeline compares (headline + caption for history, topic slugs for topic usage). Copying that value into a
+    file by hand is where shortening or retyping creeps in, and a shortened caption silently weakens the duplicate checks,
+    so the check is recomputed here and any mismatch stops the run. A bare JSON array (older RUNBOOK) is still accepted.
+    """
+    with open(path) as f:
+        data = json.load(f)
+    if isinstance(data, list):
+        return data
+    rows = data.get("rows") or []
+    if what == "history":
+        text = "\x1e".join((r.get("headline") or "") + "\x1f" + (r.get("caption") or "") for r in rows)
+    else:
+        text = ",".join(sorted(r.get("topic") or "" for r in rows))
+    if hashlib.md5(text.encode("utf-8")).hexdigest() != data.get("check"):
+        sys.exit(f"{path}: doesn't match what the database returned (the check value differs), so a headline, caption or topic "
+                 "was changed while copying it. Save the query's result again, exactly as returned: no shortening, no retyping.")
+    return rows
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("raw_history", help="query 1's result (the 20 most recent rows), saved as JSON")
     parser.add_argument("--topic-usage", help="query 2's result (every topic ever used, with its last use), saved as JSON")
     args = parser.parse_args()
 
-    with open(args.raw_history) as f:
-        raw_rows = json.load(f)
-
-    topic_usage = None
-    if args.topic_usage:
-        with open(args.topic_usage) as f:
-            topic_usage = json.load(f)
+    raw_rows = load_checked(args.raw_history, "history")
+    topic_usage = load_checked(args.topic_usage, "topics") if args.topic_usage else None
 
     print(json.dumps(shape(raw_rows, topic_usage), indent=2))
