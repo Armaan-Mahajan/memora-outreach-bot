@@ -55,7 +55,11 @@ Lucan Rock are excited; Lyan is somewhere between.
 ## Content rules (non-negotiable)
 Audience is 13–18. Sharp peer talking to another student, not SaaS copy. No user or scale counts, no manufactured urgency or
 streak guilt, no claims that aren't visible in the reel or true of the product, no curriculum names inside generated content.
-Memora is in beta: confident, never implying more scale or polish than exists. Each reel ends on the-memora.com.
+Memora is in beta: confident, never implying more scale or polish than exists.
+**Ending:** the voiceover never reads out the web address ("the-memora.com", "memora dot com"). It closes on a sign-up line
+instead, in the reel's own words, e.g. "Sign up free.", "Start free.", "Try it free." (Memora has a free plan) — never pressure
+("now or never", "before it's gone"). The address stays **on screen** on the last screen (`the-memora.com` in the outro).
+`validate` enforces both.
 
 ## Retrying temporary failures
 - **Your two Supabase calls** (stage 0 `get_project`, stage 2 Vault `select`): on a *connection* problem (timeout, "connection

@@ -38,6 +38,12 @@ copy = ' '.join(re.findall(r'>([^<>{}]{3,})<', ''.join(files.values()))) + ' ' +
 for pat, why in [(r'\b(only|just)\s+\d+\s+(spots?|left|hours?)\b|\blimited time\b|\bact now\b|\bhurry\b|\btoday only\b', 'manufactured urgency'),
                  (r'\b\d[\d,]*\+?\s+(users|students|learners|people)\b|\bthousands of\b|\bmillions of\b', 'user/scale counts are never mentioned')]:
     for m in re.finditer(pat, copy, re.I): problems.append(f'copy: "{m.group(0)}" — {why}')
+# the ending: the voice says a sign-up line, never the address; the address is on screen (REELS-RUNBOOK.md, content rules)
+vo_text = ' '.join(l.get('text', '') for l in plan.get('vo', {}).get('lines', []))
+for m in re.finditer(r'the[\s-]*memora\s*(?:\.|dot)\s*com|memora\s*(?:\.|dot)\s*com|\bwww\.', vo_text, re.I):
+    problems.append(f'voiceover says "{m.group(0)}" — never read the address out; close on a sign-up line ("Sign up free.") and show the-memora.com on the last screen')
+if not re.search(r'>[^<{}]*the-memora\.com[^<{}]*<|[\'"`]the-memora\.com[\'"`]\s*\}?\s*<', ''.join(files.values())) and not re.search(r'>\s*\{\s*[\'"`]the-memora\.com', ''.join(files.values())):
+    problems.append('the last screen must show the address: put the-memora.com as on-screen text in the outro (e.g. <div>the-memora.com</div>)')
 if problems:
     print('LINT FAILED'); [print('  - ' + p) for p in problems]; sys.exit(1)
 print(f'lint ok ({len(files)} file(s))')

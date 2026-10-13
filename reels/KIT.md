@@ -87,6 +87,8 @@ export default function Reel({ R }: { R: Resolved }) {
 - `mark(R, 'results_open')` = reel time of a recording event (to sync scene graphics with the footage).
 - `ReelShell` props: `captions={{ y, variant: 'pill' | 'lower' }}` or `false` (only if the words are shown another way);
   `sfx=[{ at, kind: 'click'|'key'|'done'|'whoosh' }]` in reel seconds (clicks and typing in footage already have sound).
+- **Outro:** end on a screen that shows `the-memora.com` as text (lint checks for it). The voice over it closes with a
+  sign-up line ("Sign up free."), never the address itself (lint rejects "the-memora.com" / "memora dot com" in `vo`).
 - Tokens: `C` colors, `TYPE` sizes (nothing under 26 px), `SAFE` (keep text between y 220 and 1590: Instagram covers the rest).
 
 `lint_reel.py` enforces: only `react`, `remotion`, `../../kit` and local imports; no network, timers, effects, randomness or
