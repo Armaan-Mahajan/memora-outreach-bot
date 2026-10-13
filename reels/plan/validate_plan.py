@@ -25,10 +25,15 @@ for i, l in enumerate(lines):
     if sum(k in l for k in ('at', 'end')) != 1: problems.append(f'vo.lines[{i}]: exactly one of "at" / "end"')
 total = sum(len(l.get('text', '')) for l in lines if isinstance(l, dict))
 if total > 600: problems.append(f'voiceover is {total} characters (max 600: it must fit the reel)')
+WPS = 2.4     # measured pace of the roster voices on eleven_v4 (2.4-2.6 words/s): estimate with this, not faster
+words = [len(l.get('text', '').split()) for l in lines if isinstance(l, dict)]
+est = sum(words) / WPS
+if isinstance(sec, list) and len(sec) == 2 and est > sec[1] - 1.5:
+    problems.append(f'voiceover is ~{est:.0f} s at {WPS} words/s, too much for a reel of at most {sec[1]} s: cut words')
 if p.get('feature') == 'adaptive' and isinstance(tl, list) and not any(x.get('kind') == 'footage' and isinstance(x.get('max'), (int, float)) and x['max'] <= 4 for x in tl):
     problems.append('adaptive reels: the fast-forward footage segment needs "max": 4 or less (the run is never more than 4 s on screen)')
 for x in (tl or []):
     if isinstance(x, dict) and 'max' in x and not (x.get('kind') == 'footage' and isinstance(x['max'], (int, float)) and 1 <= x['max'] <= 30):
         problems.append(f'segment "{x.get("id")}": "max" (1-30 s) is only for footage segments')
 if problems: print('PLAN INVALID'); [print('  - ' + x) for x in problems]; sys.exit(1)
-print(f'plan ok ({p["feature"]}, voice {vo["voice"]}, {len(lines)} lines, {total} chars)')
+print(f'plan ok ({p["feature"]}, voice {vo["voice"]}, {len(lines)} lines, {total} chars, ~{est:.1f} s of speech at {WPS} words/s: ' + ', '.join(f'{w / WPS:.1f}' for w in words) + ')')

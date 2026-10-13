@@ -15,4 +15,8 @@ for f in sorted(os.listdir(cdir)):
         json.dump(base, open(target, 'w'), indent=1, ensure_ascii=False); print(f'  content: {f} pack "{pack["key"]}" installed first')
     elif f == 'course.json':
         src.setdefault('status', 'complete'); src.setdefault('editedStructure', src['structure'])
+        for st in (src['structure'], src['editedStructure']):      # the app's schema needs these; the planner needn't write them
+            st['error'] = None; st.setdefault('course_title', src['course_title'])
+            for n in st['nodes']:
+                for sn in n['subnodes']: sn.setdefault('expected_tokens', 600)
         json.dump(src, open(os.path.join(dc, f), 'w'), indent=1, ensure_ascii=False); print(f'  content: course "{src["course_title"]}" installed')

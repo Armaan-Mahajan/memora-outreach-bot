@@ -34,7 +34,8 @@ export type Ev = { type: string; t: number; box?: Box; times?: number[]; text?: 
 export type Regions = Record<string, Box>;
 // Per-reel beats: frame `region` (a page box, 'WIDE', or 'click' = the click target with context)
 // at event `ev` (an event type or 'click:<target>'), the i-th occurrence (or every one, i = 'all'), offset dt seconds.
-export type Beat = { ev: string; i?: number | 'all'; dt?: number; region: Box | 'WIDE' | 'click'; s?: number };
+// 'box' = the element the event recorded (a click's target, or a marked step's "box" target), framed tightly.
+export type Beat = { ev: string; i?: number | 'all'; dt?: number; region: Box | 'WIDE' | 'click' | 'box'; s?: number };
 export type Cam = { cx: number; cy: number; s: number; h: number };
 export type Cur = { x: number; y: number; opacity: number; press: number };
 export type Ripple = { t: number; x: number; y: number };
@@ -81,16 +82,17 @@ export function direct(events: Ev[], regions: Regions, card: { w: number; hMax?:
   const gen = clicks.find(c => c.target === 'generate');
   if (gen?.box) { const c = center(gen.box); shots.push({ t: gen.t - LEAD, cx: c.x - 120, cy: c.y - 20, s: S_TYPE }); }
   const oOpen = find('outline_open'), oDone = find('outline_done');
-  if (oOpen && regions.dialog) shots.push({ t: oOpen.t + REACT, ...fit(regions.dialog) });
-  if (oDone && regions.outline) shots.push({ t: oDone.t + REACT + 0.2, ...fit(regions.outline) });
+  // every built-in flow shot falls back to WIDE when its region isn't known, so an earlier zoom (e.g. on Generate) never lingers
+  if (oOpen) shots.push({ t: oOpen.t + REACT, ...(regions.dialog ? fit(regions.dialog) : WIDE) });
+  if (oDone) shots.push({ t: oDone.t + REACT + 0.2, ...(regions.outline ? fit(regions.outline) : WIDE) });
   const pro = clicks.find(c => c.target === 'proceed');
   if (pro?.box) shots.push({ t: pro.t - LEAD, ...fit({ ...pro.box, x: pro.box.x - 260, w: pro.box.w + 300, y: pro.box.y - 120, h: pro.box.h + 160 }) });
   const cgs = find('course_gen_start');
-  if (cgs && regions.outline) shots.push({ t: cgs.t + REACT + 0.25, ...fit(regions.outline) });
+  if (cgs) shots.push({ t: cgs.t + REACT + 0.25, ...(regions.outline ? fit(regions.outline) : WIDE) });
   const cgd = find('course_gen_done');
   if (cgd && regions.toast) shots.push({ t: cgd.t + REACT, ...fit(regions.toast, 1.9) });
   const vo = find('viewer_open');
-  if (vo && regions.content) shots.push({ t: vo.t + 0.3, ...fit(regions.content) });
+  if (vo) shots.push({ t: vo.t + 0.3, ...(regions.content ? fit(regions.content) : WIDE) });
   // generic rule for creation flows (quiz, flashcards): when the results page opens, frame its results column
   const ro = find('results_open');
   if (ro) shots.push({ t: ro.t + REACT + 0.25, ...(regions.results ? fit(regions.results) : WIDE) });
@@ -100,10 +102,14 @@ export function direct(events: Ev[], regions: Regions, card: { w: number; hMax?:
     for (const e of hits) { const dt = bt.dt ?? (e.type === 'click' ? -LEAD : REACT);
       let r: Omit<Shot, 't'>;
       if (bt.region === 'WIDE') r = WIDE;
+      else if (bt.region === 'box') { if (!e.box) continue; r = fit(e.box, bt.s ?? S_MAX); }
       else if (bt.region === 'click') { if (!e.box) continue; const c = center(e.box); r = fit({ x: c.x - 300, y: c.y - 170, w: 600, h: 340 }, bt.s ?? S_MAX); }
       else r = fit(bt.region, bt.s ?? S_MAX);
       shots.push({ t: e.t + dt, ...r }); }
   }
+  // a typing read-zoom lets go once the typing ends, unless another shot takes over within 1.5 s
+  for (const k of keySegs) { const te = k.times![k.times!.length - 1];
+    if (!shots.some(sh => sh.t > te && sh.t <= te + 1.5)) shots.push({ t: te + 0.7, ...WIDE }); }
   const end = find('rec_end');
   shots.push({ t: (end ? end.t : dur) - 1.4, ...WIDE });
   shots.sort((a, b) => a.t - b.t);

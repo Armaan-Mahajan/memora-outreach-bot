@@ -71,6 +71,58 @@ def clip_to_reel(ct):
         if s['kind'] == 'footage' and s['clipIn'] - 1e-6 <= ct <= s['clipOut'] + 1e-6: return s['start'] + (ct - s['clipIn']) / s.get('rate', 1)
     return None
 
+# Named page regions the director's built-in rules frame (same as the fixed reels in src/Reel.tsx). A plan may override them.
+AGENT_REGIONS = {'dialog': {'x': 170, 'y': 32, 'w': 980, 'h': 796}, 'outline': {'x': 190, 'y': 90, 'w': 640, 'h': 430},
+                 'toast': {'x': 900, 'y': 16, 'w': 404, 'h': 110}, 'content': {'x': 395, 'y': 120, 'w': 830, 'h': 640}}
+RESULTS_REGION = {'results': {'x': 330, 'y': 150, 'w': 660, 'h': 640}}
+DEFAULT_REGIONS = {'agent': AGENT_REGIONS, 'quiz': RESULTS_REGION, 'flashcards': RESULTS_REGION}
+
+# ── beats: never frame an empty part of the page ──
+# A beat's region is checked against the real recording: the frame the camera settles on must show something
+# (text, controls, cards). A blank area (e.g. where a third exam card would be when there are only two) fails here.
+LEAD, REACT = 0.45, 0.15
+cw = int(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width', '-of', 'csv=p=0',
+                         os.path.join(cap_dir, 'clip.mp4')], capture_output=True, text=True).stdout.strip() or 0)
+def beat_hits(bt):
+    pool = [e for e in evs if (e['type'] == 'click' and e.get('target') == bt['ev'][6:])] if bt['ev'].startswith('click:') else [e for e in evs if e['type'] == bt['ev']]
+    if not pool: die(f'beat on "{bt["ev"]}": the recording has no such event')
+    i = bt.get('i', 0)
+    return pool if i == 'all' else pool[i:i + 1] if isinstance(i, int) and i < len(pool) else die(f'beat on "{bt["ev"]}": no occurrence #{i}')
+def region_of(bt, e):
+    r = bt['region']
+    if r == 'WIDE': return None
+    if r in ('box', 'click'):
+        b = e.get('box')
+        if not b: die(f'beat on "{bt["ev"]}" frames region "{r}" but that event recorded no box (put "box": <target> on the marked capture step)')
+        if r == 'click': cx, cy = b['x'] + b['w'] / 2, b['y'] + b['h'] / 2; return {'x': cx - 300, 'y': cy - 170, 'w': 600, 'h': 340}
+        return b
+    if not (isinstance(r, dict) and all(isinstance(r.get(k), (int, float)) for k in 'xywh')): die(f'beat on "{bt["ev"]}": region must be "WIDE", "click", "box" or {{x,y,w,h}}')
+    return r
+if cw:
+    import tempfile
+    from PIL import Image
+    import numpy as np
+    k = cw / 1320
+    for bt in plan.get('beats', []):
+        for e in beat_hits(bt):
+            r = region_of(bt, e)
+            if not r: continue
+            dt = bt.get('dt', -LEAD if e['type'] == 'click' else REACT)
+            tt = min(max(0.0, e['t'] - t0 + dt + 0.5), clip_dur - 0.05)
+            with tempfile.TemporaryDirectory() as td:
+                fp = os.path.join(td, 'f.png')
+                subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-ss', f'{tt:.3f}', '-i', os.path.join(cap_dir, 'clip.mp4'), '-frames:v', '1', fp])
+                im = Image.open(fp).convert('L')
+            # the middle 70% of the region, clamped to the frame
+            x0, y0 = r['x'] + 0.15 * r['w'], r['y'] + 0.15 * r['h']; x1, y1 = r['x'] + 0.85 * r['w'], r['y'] + 0.85 * r['h']
+            box_px = [max(0, int(x0 * k)), max(0, int(y0 * k)), min(im.width, int(x1 * k)), min(im.height, int(y1 * k))]
+            if box_px[2] - box_px[0] < 8 or box_px[3] - box_px[1] < 8: die(f'beat on "{bt["ev"]}" frames {r}, which is off screen at {tt:.1f}s of the recording')
+            a = np.asarray(im.crop(box_px), dtype=float)
+            edges = float((np.abs(np.diff(a, axis=1)) > 18).mean() + (np.abs(np.diff(a, axis=0)) > 18).mean())
+            if edges < 0.0015:     # a blank page area measures ~0; a sparse card with one line of text ~0.005
+                die(f'beat on "{bt["ev"]}" frames an EMPTY area {dict((q, round(r[q])) for q in "xywh")} at {tt:.1f}s of the recording — '
+                    'nothing is there on screen. Frame a real element instead: put "box": <target> on that capture step and use region "box".')
+
 marks = {}
 for e in evs:
     key = ('click:' + e['target']) if e['type'] == 'click' and e.get('target') else e['type']
@@ -128,7 +180,7 @@ for f in os.listdir(plan_dir):
     if f.endswith('.tsx') or f.endswith('.ts'): shutil.copy(os.path.join(plan_dir, f), os.path.join(src, f))
 if os.path.isdir(os.path.join(plan_dir, 'content')): shutil.copytree(os.path.join(plan_dir, 'content'), os.path.join(src, 'content'))
 resolved = {'slug': slug, 'dur': round(total + hold, 3), 'hold': hold, 'segments': segs,
-            'footage': {'clip': f'reels/{slug}/clip.mp4', 'events': ev_doc, 'regions': plan.get('regions', {}), 'beats': plan.get('beats', []), 'clipDur': round(clip_dur, 3)},
+            'footage': {'clip': f'reels/{slug}/clip.mp4', 'events': ev_doc, 'regions': {**DEFAULT_REGIONS.get(plan.get('feature'), {}), **plan.get('regions', {})}, 'beats': plan.get('beats', []), 'clipDur': round(clip_dur, 3)},
             'marks': marks, 'vo': {'lines': lines}, 'voDir': f'reels/{slug}/vo/'}
 json.dump(resolved, open(os.path.join(src, 'resolved.json'), 'w'), indent=1)
 print(f'  {slug}: {len(segs)} segments, {total:.2f}s + {hold:.2f}s hold = {total + hold:.2f}s')

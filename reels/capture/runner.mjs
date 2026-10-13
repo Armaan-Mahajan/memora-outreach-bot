@@ -184,11 +184,15 @@ const steps = {
   click: async s => { const l = loc(s.target); const bb = await moveTo(l, JSON.stringify(s.target)); await holdMs(s.dwell ?? 140);
     const href = s.expect_url ? await l.getAttribute('href').catch(() => null) : null;
     ev('click', { target: s.as || JSON.stringify(s.target), box: bb }); await press();
+    // "cut": true on a click that navigates edits out everything until the new page has loaded (the frozen old page)
+    if (s.cut) { capturing = false; last = null; }
     // a link that should navigate: give it 4 s, then load its href directly. A button with no href (e.g. Generate)
     // isn't waited on here — the script's next `wait` step covers it, so a following `speed` step applies to the wait
     if (s.expect_url && href) { const re = new RegExp(s.expect_url);
       try { await until(async () => re.test(p.url()), s.expect_url, 4000); }
-      catch { ev('nav_fallback', { href }); await nav(BASE + href, re); } } },
+      catch { ev('nav_fallback', { href }); await nav(BASE + href, re); } }
+    if (s.cut) { const n0 = G; if (s.expect_url) await steps.wait({ for: { load: true } }); await holdMs(s.settle ?? 400);
+      capturing = true; last = null; ev('cut', { removed: +((G - n0) / 1000).toFixed(3) }); } },
   type: async s => { const keys = [];
     for (const ch of s.text) { await p.keyboard.type(ch); keys.push(tOut());
       let d = rnd(32, 62); if (ch === ' ') d += rnd(40, 110); if (',—-/.'.includes(ch)) d += rnd(120, 220); if (ch !== ' ' && Math.random() < 0.04) d += rnd(150, 260);
@@ -226,7 +230,11 @@ await steps.wait({ for: { load: true } }); await holdMs(1500);       // load + s
 // record
 capturing = true; await p.mouse.move(mx, my);
 ev('rec_start');
-for (const s of reel.steps) { await steps[s.do](s); if (s.mark) ev(s.mark); }
+for (const s of reel.steps) { await steps[s.do](s);
+  // "box": target on a marked step records where that element is on screen right then (beats can frame it: region "box")
+  if (s.mark) { const bb = s.box ? await within(box(loc(s.box)), null) : null;
+    if (s.box && !bb) throw new Error(`step "${s.mark}": its box target ${JSON.stringify(s.box)} is not on the page`);
+    ev(s.mark, bb ? { box: bb } : {}); } }
 await frame(); ev('rec_end');
 fs.writeFileSync(`${OUT}/mouse.json`, JSON.stringify(mouse));
 fs.writeFileSync(`${OUT}/events.json`, JSON.stringify({ reel: reel.name, viewport: { w: W, h: H }, dpr: DPR, fps: FPS, frames: n, events }, null, 1));

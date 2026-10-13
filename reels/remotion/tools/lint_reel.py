@@ -24,11 +24,15 @@ for name, src in files.items():
 reel = files.get('Reel.tsx', '')
 if 'export default' not in reel: problems.append('Reel.tsx: needs `export default` of the reel component')
 if 'ReelShell' not in reel: problems.append('Reel.tsx: must wrap everything in <ReelShell R={R}> (voice, music, captions)')
+code = ''.join(files.values())
+lit = lambda sid: re.search(r"""['"`]%s['"`]""" % re.escape(sid), code)   # the id as a string literal anywhere (attribute, array, map…)
+if plan['timeline'] and '<Seg' not in code: problems.append('no <Seg R={R} id="…"> in the code: every timeline segment renders inside one')
+if any(s['kind'] == 'footage' for s in plan['timeline']) and '<AppWindow' not in code: problems.append('no <AppWindow> in the code: footage segments must show the recording')
 for s in plan['timeline']:
-    if s['kind'] == 'footage' and not re.search(r'''<AppWindow[^>]*\bid=["']%s["']''' % re.escape(s['id']), ''.join(files.values())):
-        problems.append(f'footage segment "{s["id"]}" is never shown: render it with <AppWindow R={{R}} id="{s["id"]}" /> inside <Seg R={{R}} id="{s["id"]}">')
-    if not re.search(r'''<Seg[^>]*\bid=["']%s["']''' % re.escape(s['id']), ''.join(files.values())):
-        problems.append(f'segment "{s["id"]}" has no <Seg id="{s["id"]}"> in the code')
+    if not lit(s['id']):
+        what = 'footage segment' if s['kind'] == 'footage' else 'segment'
+        problems.append(f'{what} "{s["id"]}" never appears in the code: render it with <Seg R={{R}} id="{s["id"]}">' +
+                        (f'<AppWindow R={{R}} id="{s["id"]}" /></Seg>' if s['kind'] == 'footage' else '…</Seg>') + ' (a variable id is fine if the literal is listed somewhere, e.g. an array of ids)')
 # words a minor-heavy audience must never see from us (project content rules): no fake urgency, no user counts
 copy = ' '.join(re.findall(r'>([^<>{}]{3,})<', ''.join(files.values()))) + ' ' + json.dumps(plan.get('vo', {}).get('lines', []))
 for pat, why in [(r'\b(only|just)\s+\d+\s+(spots?|left|hours?)\b|\blimited time\b|\bact now\b|\bhurry\b|\btoday only\b', 'manufactured urgency'),

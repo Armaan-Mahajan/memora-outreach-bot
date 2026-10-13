@@ -27,7 +27,7 @@ Lists the student's decks, quizzes, courses ("Photosynthesis in Depth") and Mora
 The course card does **not** navigate when clicked (use `/agent` instead); its card tilts on hover, so hover it only briefly.
 
 ### Autopilot `/autopilot`
-Two seeded exams: **"Physics test: forces and motion"** (in 5 days) and **"Biology exam: photosynthesis"** (in 12 days), each with
+Exactly **two** seeded exams, side by side (nothing below them — never frame "the next exam"): **"Physics test: forces and motion"** (in 5 days) and **"Biology exam: photosynthesis"** (in 12 days), each with
 readiness counts, topic rows, and "Make" / "Mark covered" buttons. "Study time" with more/less buttons per day.
 Material links: `a[href*='/flashcards/viewer/']` (first = "Forces and Motion" deck), `a[href*='/quizzes/viewer/']`
 (first = "Forces and Motion: Explain It"), `/agent/viewer/…` ("Photosynthesis in Depth"). They sit below the fold; a click
@@ -53,7 +53,12 @@ Multiple-choice viewer; it also ends in the adaptive rebuild panel. Not yet veri
 steps to what's on screen and expect the recording to fail fast if a guess is wrong.
 
 ### Generators (the existing reel formats)
-- Agent `/agent`: textarea → Generate → outline (`/agent/…` outline, then course build) → course viewer. Content from `content/course.json`.
+- Agent `/agent`: textarea → Generate → outline (`/agent/…` outline, then course build) → course viewer. Content from `content/course.json`
+  (7-9 nodes; the default demo course has 8, with authored content for nodes 1-3 and 7). The outline shows titles and subnodes
+  only (no word estimates). The course viewer's sidebar lists every node; the existing scripts open nodes 1-3.
+  The "Click to redirect" toast doesn't navigate on camera within the 4 s `expect_url` window (the runner then loads the link
+  directly), so put `"cut": true` on that click (as `capture/reels/agent-course.json` does): everything from the click until the
+  viewer has loaded is edited out. `"cut": true` works on any click that navigates.
 - Flashcards `/flashcards/ai-gen`: textarea → "Generate … Flashcards" → `/flashcards/ai-gen/save` → study. Pack from `content/flashcards.json`.
 - Quiz `/quizzes/ai-gen`: textarea → Generate → quiz. Pack from `content/quiz.json`.
 The typed prompt must contain one of the pack's `match` fragments (validate_content.py checks this).

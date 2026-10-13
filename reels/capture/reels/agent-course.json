@@ -23,7 +23,7 @@
   },
   {
    "do": "type",
-   "text": "AP Bio photosynthesis \u2014 light reactions, Calvin cycle, and C4/CAM plants"
+   "text": "AP Bio photosynthesis — light reactions, Calvin cycle, and C4/CAM plants"
   },
   {
    "do": "pause",
@@ -111,7 +111,9 @@
     "text": "Click to redirect"
    },
    "as": "toast_link",
-   "expect_url": "/agent/viewer/"
+   "expect_url": "/agent/viewer/",
+   "cut": true,
+   "settle": 700
   },
   {
    "do": "wait",
@@ -157,7 +159,7 @@
   {
    "do": "wait",
    "for": {
-    "css": "#content-viewer >> text=\"2.1 \u2013 The Calvin Cycle\""
+    "css": "#content-viewer >> text=\"2.1 – The Calvin Cycle\""
    },
    "cut": true,
    "settle": 900
@@ -190,7 +192,7 @@
   {
    "do": "wait",
    "for": {
-    "css": "#content-viewer >> text=\"3.1 \u2013 Photorespiration\""
+    "css": "#content-viewer >> text=\"3.1 – Photorespiration\""
    },
    "cut": true,
    "settle": 900

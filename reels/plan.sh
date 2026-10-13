@@ -35,7 +35,10 @@ STAGE="$PHASE"; PIDS=(); PERMANENT=""
 export HW="$(cat "$WORK/hardware.txt" 2>/dev/null || true)"
 MW="${MEMORA_WEB:-$WORK/memora-web}"
 
-status() { python3 - "$WORK/status.json" "$PHASE" "$STAGE" "$1" "${2:-}" <<'EOF'
+# status.json belongs to the long phases (prepare / record / finish), the ones you poll; the quick ones (validate, voice,
+# check) write status-<phase>.json so running them alongside a long phase never overwrites its status
+case "$PHASE" in prepare|record|finish) STATUS_FILE="$WORK/status.json";; *) STATUS_FILE="$WORK/status-$PHASE.json";; esac
+status() { python3 - "$STATUS_FILE" "$PHASE" "$STAGE" "$1" "${2:-}" <<'EOF'
 import json, sys, time
 p, phase, stage, state, msg = sys.argv[1:6]
 json.dump({"phase": phase, "stage": stage, "state": state, "message": msg, "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}, open(p, "w"), indent=1)
@@ -45,7 +48,7 @@ stage() { STAGE="$1"; echo "=== [$(date -u +%H:%M:%S)] $1" | tee -a "$LOG"; stat
 note() { echo "$1" >> "$RETRY_LOG"; echo "  retry: $1" | tee -a "$LOG"; }
 pause() { sleep "$( [ -n "${RETRY_FAST:-}" ] && echo 1 || echo "$1")"; }
 # kill each server's whole process tree: npx forks next, which forks next-server
-killtree() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done; kill "$1" 2>/dev/null || true; }
+killtree() { local c; for c in $(pgrep -P "$1" 2>/dev/null || true); do killtree "$c"; done; kill "$1" 2>/dev/null || true; }
 cleanup() { for p in "${PIDS[@]:-}"; do [ -n "$p" ] && killtree "$p"; done
   if [ "$PHASE" = prepare ] || [ "$PHASE" = record ]; then
     pkill -f "[n]ext start -p 3001" 2>/dev/null || true; pkill -f "[n]ext-server" 2>/dev/null || true; pkill -f "[n]ode vproxy.cjs" 2>/dev/null || true; fi; }
@@ -58,7 +61,9 @@ fail() {
       exec env RUN_ATTEMPT=2 MEMORA_WEB_TOKEN="${_MWT:-}" bash "$HERE/plan.sh" prepare
     fi;; esac; fi
   status failed "$1"; echo "FAILED at '$STAGE': $1" | tee -a "$LOG"; exit 1; }
-trap 'status failed "command failed (line $LINENO) — see run.log"; echo "FAILED at $STAGE (line $LINENO)" >> "$LOG"' ERR
+# only the main shell reports: with errtrace a failing command inside $(…) would otherwise run this in the subshell and
+# mark a healthy run "failed" (that was the stray "FAILED at … (line 48)" from pgrep finding no children)
+trap '[ "$BASH_SUBSHELL" = 0 ] && { status failed "command failed (line $LINENO) — see run.log"; echo "FAILED at $STAGE (line $LINENO)" >> "$LOG"; }' ERR
 trap cleanup EXIT
 # retry <tries> <pause_s> <label> <command…>: temporary failures only. A command returning 2 means "not temporary": stop.
 ATTEMPT=1
@@ -118,6 +123,8 @@ if [ "$PHASE" = check ]; then
   s="$ARG"; C="$WORK/check/$s"; rm -rf "$C"; mkdir -p "$C"; stage "check:$s"
   chk() { echo "$1" > "$C/error.txt"; echo "$1" | tee -a "$LOG"; status failed "check $s failed — see $C/error.txt"; exit 1; }
   [ -f "$HERE/capture/out/$s/clip.mp4" ] || chk "no recording for $s (record it: plan.sh record $s)"
+  o=$(python3 "$HERE/capture/check_capture.py" "$HERE/capture/out/$s" 2>&1) || chk "RECORDING UNREADABLE OR WRONG — re-record it (plan.sh record $s):
+$o"
   [ -f "$HERE/voice/out/vo/$s/manifest.json" ] || chk "no voiceover for $s (plan.sh voice $s)"
   o=$(validate_plan "$s" 2>&1) || chk "$o"
   o=$(cd "$RM" && python3 tools/resolve_plan.py "$PLANS/$s" "$HERE/capture/out/$s" "$HERE/voice/out/vo/$s" 2>&1) || chk "$o"

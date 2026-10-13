@@ -3,7 +3,8 @@
 # A plan may bring its own demo content — what the app "generates" on camera — in content/. All optional:
 #   content/flashcards.json  {"pack": {...}}   one flashcard pack (demo-recording-mode-v2's demo-content/flashcards.json format)
 #   content/quiz.json        {"pack": {...}}   one multiple-choice pack (demo-content/quiz.json mcqPacks format)
-#   content/course.json      {...}             a whole Agent course (demo-content/course.json format)
+#   content/course.json      {...}             a whole Agent course (demo-content/course.json format): 7-9 nodes, authored
+#                                               content for at least the first 3; expected_tokens / structure.error optional
 # install_content.py puts them into the demo build before recording: a pack is placed FIRST in its list, so a prompt
 # that contains one of its `match` fragments picks it; a course replaces the demo course.
 # Without content/, the reel uses the demo build's own seeded content (APP-MAP.md lists what exists).
@@ -47,7 +48,7 @@ for f in found:
     if f not in ('flashcards.json', 'quiz.json', 'course.json'): problems.append(f'content/{f}: unknown file (allowed: flashcards.json, quiz.json, course.json)'); continue
     try: d = json.load(open(path))
     except Exception as e: problems.append(f'content/{f}: not valid JSON ({e})'); continue
-    text_rules(d, f'content/{f}')
+    text_rules({k: v for k, v in d.items() if k != 'original_prompt'} if isinstance(d, dict) else d, f'content/{f}')   # the prompt is what's typed: curriculum names allowed there
     if f == 'flashcards.json':
         p = d.get('pack') if isinstance(d, dict) else None
         if not isinstance(p, dict): problems.append('content/flashcards.json: must be {"pack": {...}}'); continue
@@ -65,18 +66,30 @@ for f in found:
         for i, q in enumerate(qs): mcq_ok(q, f'quiz.pack.questions[{i}]')
         if 'generateQuestion' in p: mcq_ok(p['generateQuestion'], 'quiz.pack.generateQuestion')
     if f == 'course.json':
-        nodes = (d.get('structure') or {}).get('nodes', [])
-        if not s(d.get('course_title'), 3) or (d.get('structure') or {}).get('course_title') != d.get('course_title'): problems.append('course_title missing or differs from structure.course_title')
+        st = d.get('structure') or {}
+        nodes = st.get('nodes', [])
+        if not s(d.get('course_title'), 3) or st.get('course_title') != d.get('course_title'): problems.append('course_title missing or differs from structure.course_title')
         if not s(d.get('original_prompt'), 5): problems.append('course.original_prompt missing')
-        if not 2 <= len(nodes) <= 5: problems.append(f'course has {len(nodes)} nodes (2-5)')
-        if len(d.get('node_content', {})) != len(nodes): problems.append('node_content needs exactly one entry per node ("0", "1", …)')
+        if st.get('error', None) is not None: problems.append('structure.error must be null (or left out: install sets it)')
+        # a real Agent outline: 7-9 nodes, even if the reel only opens the first few (later nodes generate in parallel,
+        # so the build takes no longer; nodes without authored content get a key-concept outline from the demo app)
+        if not 7 <= len(nodes) <= 9: problems.append(f'course has {len(nodes)} nodes (7-9: plan a full course; author content for the ones the reel opens)')
+        nc = d.get('node_content', {})
+        bad = [k for k in nc if not (k.isdigit() and int(k) < len(nodes))]
+        if bad: problems.append(f'node_content keys {bad} are not node positions ("0" … "{len(nodes) - 1}")')
+        missing = [str(i) for i in range(min(3, len(nodes))) if str(i) not in nc]
+        if missing: problems.append(f'node_content needs authored content for at least the first 3 nodes (missing {missing})')
         B = chr(96) * 3
         for ni, n in enumerate(nodes):
-            subs = n.get('subnodes', [])
-            if not s(n.get('title'), 3) or not 1 <= len(subs) <= 4: problems.append(f'node {ni + 1}: title + 1-4 subnodes required')
+            subs = n.get('subnodes', []) if isinstance(n, dict) else []
+            if not isinstance(n, dict) or not s(n.get('title'), 3) or not 1 <= len(subs) <= 4: problems.append(f'node {ni + 1}: title + 1-4 subnodes required')
             for si, sn in enumerate(subs):
-                if not (s(sn.get('title'), 3) and isinstance(sn.get('key_concepts'), list) and sn['key_concepts']): problems.append(f'subnode {ni + 1}.{si + 1}: title + key_concepts required')
-            md = d.get('node_content', {}).get(str(ni), '')
+                if not (s(sn.get('title'), 3) and isinstance(sn.get('key_concepts'), list) and sn['key_concepts'] and all(s(x) for x in sn['key_concepts'])):
+                    problems.append(f'subnode {ni + 1}.{si + 1}: title + non-empty key_concepts (strings) required')
+                et = sn.get('expected_tokens')   # optional: install fills 600 (the app's schema needs an integer >= 1; it's never shown)
+                if et is not None and not (isinstance(et, int) and not isinstance(et, bool) and et >= 1): problems.append(f'subnode {ni + 1}.{si + 1}: expected_tokens must be an integer >= 1 (or left out)')
+            if str(ni) not in nc: continue
+            md = nc[str(ni)]
             parts = md.split('---BREAK SUBNODE---')
             if len(parts) != len(subs): problems.append(f'node {ni + 1}: {len(parts)} sections split by ---BREAK SUBNODE--- but {len(subs)} subnodes')
             for si, (part, sn) in enumerate(zip(parts, subs)):
@@ -89,6 +102,9 @@ for f in found:
                     if kind == 'flashcard_deck': [card_ok(c, f'node {ni + 1} flashcard_deck') for c in j['cards']]
                     else: [mcq_ok(q, f'node {ni + 1} mcq_quiz') for q in j['questions']]
                 except Exception as e: problems.append(f'node {ni + 1}: {kind} block is not valid JSON ({e})')
+        es = d.get('editedStructure')
+        if es is not None and [n.get('title') for n in es.get('nodes', [])[:len(nodes)]] != [n.get('title') for n in nodes]:
+            problems.append('editedStructure must start with the same nodes as structure (or be left out)')
 
 # a custom pack only shows up if the prompt typed on camera contains one of its match fragments
 cap_path = os.path.join(plan_dir, 'capture.json')

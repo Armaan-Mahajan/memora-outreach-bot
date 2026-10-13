@@ -35,6 +35,8 @@ for i, s in enumerate(steps):
         if s.get('k') not in ('fast', 'normal'): problems.append(f'step {i + 1}: speed k must be "fast" or "normal"')
         if 'x' in s and not (isinstance(s['x'], (int, float)) and 1.5 <= s['x'] <= 12): problems.append(f'step {i + 1}: speed x must be 1.5-12')
     if k == 'type': typed += len(s.get('text', ''))
+    if 'box' in s and not ('mark' in s and isinstance(s['box'], dict) and {'css', 'role', 'text'} & set(s['box'])):
+        problems.append(f'step {i + 1}: "box" needs a "mark" on the same step and a target (css, role+name or text)')
     if 'expect_url' in s and not str(s['expect_url']).startswith('/'): problems.append(f'step {i + 1}: expect_url must be an app path')
     t = s.get('target') or (s.get('for') if isinstance(s.get('for'), dict) else None)
     if isinstance(t, dict) and not ({'css', 'role', 'text'} & set(t) or {'url', 'load', 'enabled'} & set(t)): problems.append(f'step {i + 1}: target needs css, role+name, or text')

@@ -81,7 +81,7 @@ Write `~/.reels-secrets.env` (`DEMO_PASSWORD=…`, `ELEVENLABS_API_KEY=…`, `ME
 ```bash
 cd ~ && (set -a; . ~/.reels-secrets.env; set +a; WORK=~/reels-run nohup bash ~/ob/reels/plan.sh prepare > ~/reels-console.log 2>&1 &)
 ```
-Then every 8 minutes: `sleep 480; cat ~/reels-run/status.json`. It builds the app (≈10 min), then per reel: content → reset →
+Then every 8 minutes: `sleep 480; cat ~/reels-run/status.json` (only `prepare` / `record` / `finish` write it; a `"failed"` there is real). It builds the app (≈10 min), then per reel: content → reset →
 record → voice. Recording runs roughly 8–10× slower than the clip. `"state": "done"` → stage 5. `"failed"` → stage 8.
 No change for 40 minutes → treat as failed ("stalled at <stage>").
 
@@ -100,7 +100,7 @@ that says something the footage doesn't show.
 |---|---|
 | Reel code / scene design / timeline / voice timing | edit `Reel.tsx` / `plan.json` → `check` |
 | Voice script or voice changed | edit `plan.json` → `plan.sh voice <slug>` → `check` |
-| The recording is wrong (wrong page, missed step) | edit `capture.json` (+ `content/`) → `plan.sh record <slug>` (needs the secrets env, run it in the background like stage 4) → `check` |
+| The recording is wrong (wrong page, missed step), or `check` says RECORDING UNREADABLE | edit `capture.json` (+ `content/`) → `plan.sh record <slug>` (needs the secrets env, run it in the background like stage 4) → `check` |
 After 3 failed attempts, drop the reel: write the reason to `~/reels-run/dropped-<slug>.txt`.
 
 ### 8. Finish
