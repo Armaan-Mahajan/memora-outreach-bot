@@ -8,7 +8,7 @@ Slideshows can get away with one reusable template because the slide content doe
 
 Instead, variety lives one level up: a small, hand-built library of **layouts**, each independently verified once, and the *choice* of which layout to use becomes a deterministic rotation decision (same rotation layer that already picks feature/topic/archetype in the pipeline plan) — not something either the LLM or a human picks per post. The content-writing step's job stays exactly as scoped as it's always been: fill in a known schema.
 
-## The seven layouts
+## The nine layouts
 
 | Layout | Composition | Natural fit |
 | --- | --- | --- |
@@ -19,8 +19,10 @@ Instead, variety lives one level up: a small, hand-built library of **layouts**,
 | `chat-mockup` | Stylized Mora conversation, user + Mora bubbles | Mora |
 | `flashcard-mockup` | Stylized flashcard stack with a front-side question | Flashcards |
 | `checklist` | Vertical benefit checklist, hero-sized (distinct from `flow-outline`'s compact outline panel) | Generic tips / "why students switch" posts |
+| `autopilot-plan` | A week's plan panel: exam chips, a 7-day bar chart of study minutes (exam days flagged, rest days dashed), today's session list and a secure/practised/not-started bar | Autopilot |
+| `adaptive-rebuild` | One rebuild of an adaptive deck or quiz: the session's result dots, the app's one-line note, then Retired / Reworded / New change cards | Adaptive decks / quizzes |
 
-Each is a fully self-contained `template.html` — no shared includes, so no build step — but all seven share identical CSS for the brand shell (header with logo/wordmark/badge, footer with CTA + "Link in bio", background glow, Geist font). Only the `.hero` zone between them differs per layout. Copy-paste the shell verbatim into any future layout to keep that consistent.
+Each is a fully self-contained `template.html` — no shared includes, so no build step — but all nine share identical CSS for the brand shell (header with logo/wordmark/badge, footer with CTA + "Link in bio", background glow, Geist font). Only the `.hero` zone between them differs per layout. Copy-paste the shell verbatim into any future layout to keep that consistent.
 
 ## Files
 
@@ -77,5 +79,5 @@ Chat bubble (Mora only — used as the avatar in `chat-mockup`):
 
 - No user-count or scale claims anywhere in the layout — Memora is pre-launch at ~86 registered users, and the site itself says "Public release soon."
 - No countdown/urgency elements, no fabricated testimonials or stats.
-- Feature claims are grounded in what the product actually does (see `claude-knowledge/memora-overview.md`) — e.g. don't claim Quizzes "adapt" the way Flashcards explicitly do; Quizzes' real claim is instant grading, including AI grading of open-ended answers.
+- Feature claims are grounded in what the product actually does (see `claude-knowledge/memora-overview.md`) — e.g. a quiz's "adaptive" claim is the rebuild after a session (retire / reword / add), not that it changes mid-quiz; a rebuild costs credits, so never call it free.
 - Tone shifts a notch more peer-to-peer than the site's own SaaS-style copy, per `outreach-bot-brief.md` — "a sharp peer talking to another student under deadline pressure," not marketing copy.

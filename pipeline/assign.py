@@ -4,7 +4,7 @@ Stage 1 -- Plan the batch (deterministic). Picks what a single post should be ab
 
 Two format shapes, each with its own rotation axis:
 
-  single_image -- archetype is always "feature-highlight". Rotates through Memora's four core features (agent, flashcards, quizzes, mora), never repeating the immediately previous one, then assigns a layout: the feature's natural layout if it has one (agent->flow-outline, flashcards->flashcard-mockup, mora->chat-mockup), otherwise one of the four generic layouts (stat-hero, quote-callout, comparison, checklist), rotating so the same generic layout doesn't repeat back-to-back.
+  single_image -- archetype is always "feature-highlight". Rotates through Memora's six core features (agent, flashcards, autopilot, quizzes, adaptive, mora), never repeating the immediately previous one, then assigns a layout: the feature's natural layout if it has one (agent->flow-outline, flashcards->flashcard-mockup, mora->chat-mockup, autopilot->autopilot-plan, adaptive->adaptive-rebuild), otherwise one of the four generic layouts (stat-hero, quote-callout, comparison, checklist), rotating so the same generic layout doesn't repeat back-to-back.
 
   slideshow -- pulls from topics.json. Never repeats a topic until every topic in the list has been used once, judged against history's all-time `topic_usage` (Stage 0's second query), not just the 20-row window. Weights the two archetypes topics.json carries toward micro-lessons (ARCHETYPE_WEIGHTS, 3:1 -- micro-lessons are the lead format, technique tips are supporting volume) by picking whichever is furthest below its share of recent history, then round-robins across subjects within that archetype -- the subject whose last use is oldest goes next (never-used subjects first, ties alphabetical), and within it the alphabetically-first unused topic. So consecutive micro-lessons never share a subject while another one still has topics left. Once the whole list is exhausted it recycles in true least-recently-used order rather than erroring.
 
@@ -22,12 +22,16 @@ import argparse
 import json
 import sys
 
-FEATURES = ["agent", "flashcards", "quizzes", "mora"]
+# autopilot and adaptive (adaptive flashcard decks / quizzes) added 2026-10-13 with their own layouts. Order interleaves the
+# standouts with the everyday tools so consecutive posts don't cluster on one kind of feature.
+FEATURES = ["agent", "flashcards", "autopilot", "quizzes", "adaptive", "mora"]
 
 NATURAL_LAYOUT = {
     "agent": "flow-outline",
     "flashcards": "flashcard-mockup",
     "mora": "chat-mockup",
+    "autopilot": "autopilot-plan",
+    "adaptive": "adaptive-rebuild",
     # quizzes has no natural layout -- shares the generic rotation below.
 }
 
@@ -47,6 +51,8 @@ def load_json(path):
 def assign_single_image(history):
     last_feature = history.get("last_feature")
     last_layout = history.get("last_layout")
+    # history.py's last_generic_layout; older shaped-history files only have last_layout
+    last_generic = history.get("last_generic_layout") or (last_layout if last_layout in GENERIC_LAYOUTS else None)
 
     # Rotate features: walk FEATURES starting just after the last one used, so the cycle is stable and reproducible rather than "anything but the last one" (which would let feature N and N+2 be the same forever).
     if last_feature in FEATURES:
@@ -59,8 +65,8 @@ def assign_single_image(history):
     if natural:
         layout = natural
     else:
-        if last_layout in GENERIC_LAYOUTS:
-            start = (GENERIC_LAYOUTS.index(last_layout) + 1) % len(GENERIC_LAYOUTS)
+        if last_generic in GENERIC_LAYOUTS:
+            start = (GENERIC_LAYOUTS.index(last_generic) + 1) % len(GENERIC_LAYOUTS)
         else:
             start = 0
         layout = GENERIC_LAYOUTS[start]

@@ -1,6 +1,6 @@
 # Memora — product overview
 
-Reference doc for the Memora HQ Claude Project. Reflects the codebase and legal docs as of 2026-08-28. Update this when something here goes stale rather than letting conversations quietly drift from it.
+Reference doc for the Memora HQ Claude Project. Reflects the codebase and legal docs as of 2026-08-28; Autopilot and adaptive decks/quizzes added 2026-10-13 from the live app. Update this when something here goes stale rather than letting conversations quietly drift from it.
 
 ## What it is
 
@@ -20,6 +20,18 @@ High schoolers, roughly ages 13-18, across a genuinely global mix of curricula �
 
 - **Flashcards** — AI-generated cards that adapt to what the student already knows.
 - **Quizzes** — MCQ, short-answer/open-ended, true/false; graded instantly, including AI grading of open-ended responses.
+- **Memora Autopilot** (new in Beta 0.9) — the student adds their exams (dates, and topics picked from their syllabus or found
+  in uploaded notes and past papers) and how long they can study each day (any day can be set to zero). Autopilot plans every
+  session from now until exam day: **one session a day, sized to the time available**, made of flashcards and quiz questions that
+  are due plus new ones, mixed across all their exams. The day before an exam is mostly review of what's due. Every topic shows
+  whether it's **secure, practised or not started**. Site copy: "Your notes in. A daily study plan out." / "Tell it when your exams
+  are and how long you can study each day. Autopilot plans every session from now until exam day, so you always know what to do
+  next." Planning and daily sessions don't use credits.
+- **Adaptive decks and quizzes** — flashcard decks and quizzes (multiple choice and written answers) record how the student did
+  on each card or question. After a session the student can **rebuild** the deck or quiz around those results: items they got
+  right every time are **retired** (taking a break), unclear ones are **reworded**, and **new** ones are added for what they kept
+  missing (e.g. a worked example). The rebuild can be undone, and Autopilot schedules the items around how the student did.
+  Site copy: "Adaptive mode rebuilds a deck around what you keep missing." A rebuild costs credits (don't advertise it as free).
 - **Mora** — Memora's AI tutor. A chat interface with a canvas: diagramming (Mermaid, including AI diagram repair), math rendering (KaTeX), file upload, and a "flow" of chat nodes rather than a flat thread.
 - **Memora Agent** — the flagship, most differentiated feature. A student uploads a syllabus and the Agent generates a full structured interactive course: modules and subtopics, with flashcards and quizzes embedded directly into each node. Marketed on the site as "Available only on Memora." This is the feature to lead with in anything competitive or differentiating.
 - **Syllabus / curriculum organization** — subjects and topics structured against the student's selected curriculum board.

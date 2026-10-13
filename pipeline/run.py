@@ -18,11 +18,12 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from assign import assign_single_image, assign_slideshow  # noqa: E402
+from assign import GENERIC_LAYOUTS, assign_single_image, assign_slideshow  # noqa: E402
 
 EMPTY_HISTORY = {
     "last_feature": None,
     "last_layout": None,
+    "last_generic_layout": None,
     "used_topics": [],
     "archetype_counts": {},
     "recent_by_feature": {},
@@ -43,6 +44,8 @@ def simulate(fmt, count, history, topics_doc):
             pick = assign_single_image(history)
             history["last_feature"] = pick["feature"]
             history["last_layout"] = pick["layout"]
+            if pick["layout"] in GENERIC_LAYOUTS:
+                history["last_generic_layout"] = pick["layout"]
         else:
             pick = assign_slideshow(history, topics_doc)
             history.setdefault("used_topics", [])

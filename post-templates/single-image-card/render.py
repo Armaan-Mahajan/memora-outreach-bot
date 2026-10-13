@@ -99,6 +99,110 @@ def build_messages(messages):
     return "\n".join(parts)
 
 
+COLORS = {"violet", "blue", "green", "amber"}
+EXAM_FLAG_BG = {"violet": "#c4b5fd", "blue": "#93c5fd", "green": "#6ee7b7", "amber": "#fcd34d"}
+
+
+def _color(c):
+    return c if c in COLORS else "violet"
+
+
+def build_exams(exams):
+    return "\n".join(
+        f'<div class="exam-chip"><span class="dot c-{_color(e.get("color"))}"></span>{rich(e["name"])}'
+        f' <span class="when">· {rich(e.get("when", ""))}</span></div>'
+        for e in exams
+    )
+
+
+def build_week(days):
+    """Seven days of the plan: bar height = minutes that day (0 = rest day), the exam day flagged, today highlighted."""
+    top = max([d.get("minutes", 0) for d in days] + [1])
+    parts = []
+    for d in days:
+        mins = int(d.get("minutes", 0))
+        cls = ["day"] + (["today"] if d.get("today") else []) + (["rest"] if mins == 0 else []) + (["exam-day"] if d.get("exam") else [])
+        h = max(18, round(118 * mins / top)) if mins else 14
+        flag = ""
+        if d.get("exam"):
+            flag = (f'<span class="exam-flag" style="background:{EXAM_FLAG_BG[_color(d.get("exam_color"))]}">'
+                    f'{rich(d["exam"])}</span>')
+        label = f"{mins}m" if mins else "rest"
+        tint = ""
+        if d.get("exam") and not d.get("today"):   # the exam day's bar takes its exam's colour
+            c = EXAM_FLAG_BG[_color(d.get("exam_color"))]
+            tint = f";background:{c}33;border-color:{c}aa"
+        parts.append(
+            f'<div class="{" ".join(cls)}"><div class="mins">{label}</div>'
+            f'<div class="bar-wrap">{flag}<div class="bar" style="height:{h}px{tint}"></div></div>'
+            f'<div class="label">{rich(d["day"])}</div></div>'
+        )
+    return "\n".join(parts)
+
+
+def build_session_items(items):
+    out = []
+    for it in items:
+        quiz = it.get("kind", "").lower().startswith("quiz")
+        out.append(
+            f'<div class="item"><span class="kind {"kind-quiz" if quiz else "kind-cards"}">{"Quiz" if quiz else "Cards"}</span>'
+            f'<span class="topic">{rich(it["topic"])}</span><span class="count">{rich(it.get("count", ""))}</span></div>'
+        )
+    return "\n".join(out)
+
+
+def build_readiness(r):
+    s, p, n = int(r.get("secure", 0)), int(r.get("practised", 0)), int(r.get("not_started", 0))
+    segs = "".join(
+        f'<div class="{cls}" style="flex:{v}"></div>' for cls, v in (("seg-secure", s), ("seg-practised", p), ("seg-new", n)) if v > 0
+    )
+    return (
+        f'<div class="ready-head"><div class="ready-label">{rich(r["label"])}</div>'
+        '<div class="ready-legend"><span><i class="seg-secure"></i>Secure</span>'
+        '<span><i class="seg-practised"></i>Practised</span><span><i class="seg-new"></i>Not started</span></div></div>'
+        f'<div class="ready-bar">{segs}</div>'
+    )
+
+
+ICON_RETIRED = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" '
+                'stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8 12.5 11 15.5 16.5 9"/></svg>')
+ICON_REWORDED = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" '
+                 'stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>')
+ICON_NEW = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" '
+            'stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>')
+
+
+def build_results(r):
+    """The session the rebuild came from: "7 / 10" plus one dot per card or question (green right, red missed)."""
+    total, correct = int(r["total"]), int(r["correct"])
+    dots = "".join('<i class="ok"></i>' if i < correct else '<i class="miss"></i>' for i in range(total))
+    label = rich(r.get("label", "Last session"))
+    return f'<div class="score-text"><span>{label}</span> {correct}/{total}</div><div class="dots">{dots}</div>'
+
+
+def _group(title_cls, icon, title, rows):
+    if not rows:
+        return ""
+    return f'<div class="g-title {title_cls}">{icon}{title} {len(rows)}</div>' + "".join(rows)
+
+
+def build_retired(items):
+    rows = [f'<div class="change retired"><div class="q">{rich(it["text"])}</div>'
+            + (f'<div class="why">{rich(it["why"])}</div>' if it.get("why") else "") + "</div>" for it in items]
+    return _group("g-retired", ICON_RETIRED, "Retired", rows)
+
+
+def build_reworded(items):
+    rows = [f'<div class="change"><div class="old">{rich(it["old"])}</div><div class="q">{rich(it["new"])}</div></div>' for it in items]
+    return _group("g-reworded", ICON_REWORDED, "Reworded", rows)
+
+
+def build_added(items):
+    rows = [f'<div class="change"><div class="q">{rich(it["text"])}</div>'
+            + (f'<div class="why">{rich(it["why"])}</div>' if it.get("why") else "") + "</div>" for it in items]
+    return _group("g-new", ICON_NEW, "New", rows)
+
+
 # Per-layout config: which array fields need a builder function (anything
 # not listed here is treated as a plain scalar and substituted directly),
 # plus how aggressively the primary-text auto-fit is allowed to shrink it.
@@ -144,6 +248,25 @@ LAYOUTS = {
         "list_fields": {"items": build_check_items},
         "fit_max_lines": 2,
         "fit_min_px": 40,
+    },
+    "autopilot-plan": {
+        "list_fields": {
+            "exams": build_exams,
+            "week": build_week,
+            "session_items": build_session_items,
+            "readiness": build_readiness,
+        },
+        "fit_max_lines": 2,
+        "fit_min_px": 44,
+    },    "adaptive-rebuild": {
+        "list_fields": {
+            "results": build_results,
+            "retired": build_retired,
+            "reworded": build_reworded,
+            "added": build_added,
+        },
+        "fit_max_lines": 2,
+        "fit_min_px": 44,
     },
 }
 

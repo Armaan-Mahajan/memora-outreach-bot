@@ -1,0 +1,32 @@
+{
+  "slug": "autopilot-two-exams",
+  "badge_text": "",
+  "eyebrow": "Memora Autopilot",
+  "headline": "Your notes in. A daily study plan out.",
+  "subhead": "Add your exam dates and how long you can study each day. Autopilot plans every session until exam day.",
+  "exams": [
+    {"name": "Economics exam", "when": "Thu", "color": "blue"},
+    {"name": "Physics test", "when": "Mon", "color": "violet"}
+  ],
+  "week": [
+    {"day": "Tue", "minutes": 25, "today": true},
+    {"day": "Wed", "minutes": 30},
+    {"day": "Thu", "minutes": 20, "exam": "Econ", "exam_color": "blue"},
+    {"day": "Fri", "minutes": 25},
+    {"day": "Sat", "minutes": 30},
+    {"day": "Sun", "minutes": 0},
+    {"day": "Mon", "minutes": 15, "exam": "Physics", "exam_color": "violet"}
+  ],
+  "today_label": "Today · 25 min",
+  "today_note": "Mixed across both exams",
+  "session_items": [
+    {"kind": "flashcards", "topic": "Price elasticity of demand", "count": "8 due"},
+    {"kind": "quiz", "topic": "Resultant forces", "count": "5 new"},
+    {"kind": "flashcards", "topic": "Newton's second law", "count": "6 due"}
+  ],
+  "readiness": {"label": "Physics: 4 of 9 topics secure", "secure": 4, "practised": 3, "not_started": 2},
+  "cta_text": "Plan my exams",
+  "footer_note": "Link in bio",
+  "caption": "Two exams in one week and no idea where to start? 📅\n\nTell Memora Autopilot when your exams are and how long you can actually study each day. It plans every session from now until exam day, mixing flashcards and quiz questions across both subjects, and keeps your rest days free.\n\nEvery topic shows what's secure, practised or not started yet, so you find the gaps before the exam does.\n\nPlan your exams free. Link in bio.",
+  "hashtags": ["#studytok", "#studyplanner", "#examseason", "#studentlife", "#memora"]
+}

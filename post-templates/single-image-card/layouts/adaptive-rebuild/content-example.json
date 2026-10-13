@@ -1,0 +1,23 @@
+{
+  "slug": "adaptive-forces-rebuild",
+  "badge_text": "",
+  "eyebrow": "Adaptive decks",
+  "headline": "Your deck rebuilds itself around what you missed.",
+  "subhead": "",
+  "material_label": "Forces and Motion · Physics",
+  "results": {"label": "Last session", "correct": 7, "total": 10},
+  "rebuild_note": "Mass versus weight was the tricky one, so it now has a worked example card.",
+  "retired": [
+    {"text": "What is the unit of force?", "why": "Right every time, so it's taking a break"}
+  ],
+  "reworded": [
+    {"old": "What happens to an object when the forces on it are balanced?", "new": "If the forces on an object are balanced, what is the resultant force?"}
+  ],
+  "added": [
+    {"text": "An astronaut has a mass of 60 kg on Earth. What is their mass on the Moon?", "why": "A concrete example to separate mass from weight"}
+  ],
+  "cta_text": "Try adaptive decks",
+  "footer_note": "Link in bio",
+  "caption": "Got 7 out of 10? Your deck should care about the 3. 🎯\n\nAfter a session, adaptive mode rebuilds the deck around what you keep missing: cards you nail every time take a break, confusing ones get reworded, and new cards show up for the exact idea that tripped you up.\n\nWorks for quizzes too, and Autopilot schedules what's due around how you did.\n\nStart free. Link in bio.",
+  "hashtags": ["#physics", "#flashcards", "#studytok", "#activerecall", "#memora"]
+}

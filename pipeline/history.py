@@ -18,6 +18,7 @@ Output (stdout): a JSON object --
 {
   "last_feature": str | null,  # feature on the single most recent row
   "last_layout": str | null,  # layout on the single most recent row
+  "last_generic_layout": str | null,  # most recent single-image row on a generic layout (stat-hero etc.) -- what the generic rotation steps from
   "used_topics": [str, ...],  # every distinct topic slug in history
   "archetype_counts": {archetype: int, ...},
   "recent_by_feature": {feature: [{"headline", "caption", "created_at"}, ...]}  # up to 15 most recent per feature, for Stage 2's "don't repeat this angle" context
@@ -43,6 +44,12 @@ def shape(rows, topic_usage=None):
             last_feature = row.get("feature")
             last_layout = row.get("layout")
             break
+
+    # Only Quizzes uses the generic layouts, and the post before a Quizzes post is always a natural-layout feature, so the
+    # generic rotation has to step from the last generic layout actually used, not from the previous post's layout.
+    from assign import GENERIC_LAYOUTS
+    last_generic_layout = next((r.get("layout") for r in rows_by_recency
+                                if r.get("format") == "single_image" and r.get("layout") in GENERIC_LAYOUTS), None)
 
     used_topics = sorted({row["topic"] for row in rows if row.get("topic")})
 
@@ -76,6 +83,7 @@ def shape(rows, topic_usage=None):
     result = {
         "last_feature": last_feature,
         "last_layout": last_layout,
+        "last_generic_layout": last_generic_layout,
         "used_topics": used_topics,
         "archetype_counts": dict(archetype_counts),
         "recent_by_feature": dict(recent_by_feature),

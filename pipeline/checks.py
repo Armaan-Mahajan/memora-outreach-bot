@@ -39,6 +39,9 @@ SIMILARITY_THRESHOLD = 0.6
 # below) still gets caught at the same bar as everywhere else.
 LAYOUT_SIMILARITY_THRESHOLDS = {
     "flow-outline": 0.8,
+    # single-feature layouts too: every post describes the same feature, so headline/caption vocabulary converges
+    "autopilot-plan": 0.8,
+    "adaptive-rebuild": 0.8,
 }
 
 
