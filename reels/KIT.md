@@ -14,9 +14,9 @@ A planned reel is a folder `~/reels-run/plans/<slug>/`:
 ## plan.json
 ```json
 {
- "slug": "adaptive-forces-run",            // = folder name; lowercase-hyphen
+ "slug": "r2-adaptive-forces-run",         // = folder name; starts with the assigned reel number r<n>-
  "feature": "adaptive",                    // agent | quiz | flashcards | autopilot | overview | adaptive
- "topic": {"subject": "Physics", "topic": "Forces and motion", "level": "younger"},
+ "topic": {"slug": "<assigned topic slug>", "subject": "Physics", "topic": "Forces and motion", "level": "younger"},  // slug: agent/quiz/flashcards
  "format": "one line: the shape you chose and why it suits this reel",
  "hook": "the first words / on-screen line",
  "seconds": [25, 45],                      // the final length must land inside (15-60)

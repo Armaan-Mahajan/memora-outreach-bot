@@ -79,6 +79,11 @@ AUTH_ERR='Authentication failed|could not read Username|returned error: 40[13]|I
 drop() { echo "$2" > "$WORK/dropped-$1.txt"; echo "  DROPPED $1: $2" | tee -a "$LOG"; note "reel $1 dropped: $2"; }
 
 slugs() { for d in "$PLANS"/*/; do [ -f "$d/plan.json" ] && basename "$d"; done | sort; }
+# numpy + Pillow (contact sheets, sound effects): install them for the python3 this script uses if the image lacks them
+py_deps() { python3 -c "import numpy, PIL" 2>/dev/null && return 0
+  echo "  installing numpy + Pillow for $(python3 --version 2>&1)" | tee -a "$LOG"
+  python3 -m pip install -q --break-system-packages numpy Pillow >>"$LOG" 2>&1 || python3 -m pip install -q --user numpy Pillow >>"$LOG" 2>&1
+  python3 -c "import numpy, PIL" 2>/dev/null; }
 npm_ci() { (cd "$1" && npm ci --no-audit --no-fund >>"$LOG" 2>&1); }
 CORES=$(nproc 2>/dev/null || echo 1); RENDER_CONC=$(( CORES >= 2 ? 2 : 1 ))
 CHROME_SHELL=$(ls -d /opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell 2>/dev/null | head -1 || true)
@@ -89,7 +94,9 @@ validate_plan() { local s=$1 d="$PLANS/$1"
   python3 "$HERE/plan/validate_plan.py" "$d" "$HERE/config.json" || return 1
   python3 "$HERE/plan/validate_content.py" "$d" || return 1
   python3 "$HERE/plan/validate_capture.py" "$d" || return 1
-  python3 "$RM/tools/lint_reel.py" "$d" || return 1; }
+  python3 "$RM/tools/lint_reel.py" "$d" || return 1
+  # today's assignment and the no-repeat check (REELS-RUNBOOK.md stage 3); skipped only when there is no assignment file
+  if [ -f "$WORK/assignment.json" ]; then python3 "$HERE/plan/history.py" check-plan "$d" "$WORK/assignment.json" || return 1; fi; }
 if [ "$PHASE" = validate ]; then
   stage "validate:$ARG"
   if out=$(validate_plan "$ARG" 2>&1); then echo "$out" | tee -a "$LOG"; status done "plan $ARG is valid"; exit 0
@@ -120,6 +127,7 @@ remotion_ready() {
 register_ok() { local list=() x; for x in $(slugs); do [ -f "$RM/src/reels/$x/resolved.json" ] && list+=("$x"); done
   python3 "$RM/tools/register_reels.py" "${list[@]}" >>"$LOG"; }
 if [ "$PHASE" = check ]; then
+  py_deps || { echo "python3 numpy/Pillow missing and could not be installed" | tee -a "$LOG"; status failed "numpy/Pillow missing"; exit 1; }
   s="$ARG"; C="$WORK/check/$s"; rm -rf "$C"; mkdir -p "$C"; stage "check:$s"
   chk() { echo "$1" > "$C/error.txt"; echo "$1" | tee -a "$LOG"; status failed "check $s failed — see $C/error.txt"; exit 1; }
   [ -f "$HERE/capture/out/$s/clip.mp4" ] || chk "no recording for $s (record it: plan.sh record $s)"
@@ -150,6 +158,7 @@ fi
 
 # ── finish: render every checked reel, loudness, verify ──────────────────────────────────────────────────────────────
 if [ "$PHASE" = finish ]; then
+  py_deps || fail "python3 numpy/Pillow missing and could not be installed"
   stage finish-setup; remotion_ready || fail "could not install Remotion"
   OKS=(); for s in $(slugs); do
     if [ -f "$WORK/check/$s/ok" ]; then OKS+=("$s"); elif [ ! -f "$WORK/dropped-$s.txt" ]; then drop "$s" "its check never passed"; fi; done
@@ -188,8 +197,17 @@ for d in sorted(glob.glob(os.path.join(plans, '*', 'plan.json'))):
     ims = [Image.open(f"{tmp}/{i}.jpg") for i in range(8)]; W, H = ims[0].size; S = Image.new("RGB", (W * 4, H * 2))
     for i, im in enumerate(ims): S.paste(im, ((i % 4) * W, (i // 4) * H))
     S.save(os.path.join(work, 'out', f'{s}-sheet.jpg'), quality=85)
+# the files Armaan gets: "<ISO date>-reel <n>.mp4", numbered in slug order (plan slugs r1-…, r2-…, r3-… set that order)
+import shutil
+date = os.environ.get("REEL_DATE") or subprocess.run(["date", "+%F"], capture_output=True, text=True, env={**os.environ, "TZ": "Asia/Kolkata"}).stdout.strip()
+dl = os.path.join(work, 'out', 'deliver'); shutil.rmtree(dl, ignore_errors=True); os.makedirs(dl)
+import re
+for k, r in enumerate([r for r in rows if r['ok']], 1):
+    m = re.match(r'r(\d+)-', r['reel']); k = int(m.group(1)) if m else k      # reel number = the plan's r<n>- (the assignment's)
+    name = f"{date}-reel {k}.mp4"; shutil.copy(os.path.join(work, 'out', r['file']), os.path.join(dl, name)); r['delivered_as'] = name
+    print(f"  → out/deliver/{name}  ({r['reel']})")
 rl = os.environ.get("RETRY_LOG"); retries = [l.strip() for l in open(rl)] if rl and os.path.exists(rl) else []
-json.dump({"hardware": os.environ.get("HW", ""), "run_attempt": int(os.environ.get("RUN_ATTEMPT", "1")), "retries": retries,
+json.dump({"date": date, "hardware": os.environ.get("HW", ""), "run_attempt": int(os.environ.get("RUN_ATTEMPT", "1")), "retries": retries,
            "reels": rows, "dropped": dropped}, open(os.path.join(work, 'out', 'summary.json'), 'w'), indent=1)
 sys.exit(1 if any(not r['ok'] for r in rows) or not rows else 0)
 EOF
@@ -237,7 +255,7 @@ fi
 
 stage preflight
 for c in node npm npx git ffmpeg ffprobe python3 curl; do command -v "$c" >/dev/null || fail "missing command: $c"; done
-python3 -c "import numpy, PIL" 2>/dev/null || fail "python3 numpy/Pillow missing"
+retry 2 10 "pip install numpy/Pillow" py_deps || fail "python3 numpy/Pillow missing and could not be installed"
 [ -n "${DEMO_PASSWORD:-}" ] || fail "DEMO_PASSWORD not set"
 [ -n "${ELEVENLABS_API_KEY:-}" ] || fail "ELEVENLABS_API_KEY not set"
 [ -n "$CHROME_SHELL" ] || fail "no Chromium headless shell under /opt/pw-browsers"
