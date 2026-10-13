@@ -15,7 +15,7 @@ Instead, variety lives one level up: a small, hand-built library of **layouts**,
 | `flow-outline` | Syllabus → Agent → Course flow diagram + a generated-outline preview panel | Agent (the one layout still tied to specific hardcoded flow-diagram content) |
 | `stat-hero` | Oversized numeral + headline, vertically centered | Generic "why Memora" claims |
 | `quote-callout` | One big typographic statement, no panel at all | A sharp one-liner / hook post |
-| `comparison` | Two-column "old way / with Memora" split | Generic persuasion, pain-point-led |
+| `comparison` | "Old way / with Memora" as two full-width bands stacked one above the other (old on top, Memora below), sized to content and centred | Generic persuasion, pain-point-led |
 | `chat-mockup` | Stylized Mora conversation, user + Mora bubbles | Mora |
 | `flashcard-mockup` | Stylized flashcard stack with a front-side question | Flashcards |
 | `checklist` | Vertical benefit checklist, hero-sized (distinct from `flow-outline`'s compact outline panel) | Generic tips / "why students switch" posts |

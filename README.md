@@ -37,14 +37,14 @@ A normal run makes three planned reels. Next: deeper coverage of the quiz viewer
 
 ## images (`pipeline/`, `post-templates/`)
 
-The original automation: single-image posts and slideshow carousels, drafted daily by a scheduled cloud run (1AM IST) that follows `RUNBOOK.md`.
+The original automation: single-image posts and slideshow carousels, drafted daily by a Claude Code routine that follows `RUNBOOK.md` and ends its report with the commands to open the review dashboard locally.
 
 - **Topics.** `topics.json` is a curated allowlist of about 190 topics, split roughly evenly between upper high school (AP, IB DP, A-Level) and younger high school (ages 13-15), each tagged with its `level`. `pipeline/assign.py` rotates through it deterministically and never repeats a topic until the list is used up. The content step isn't allowed to write about anything outside it.
 - **Design as code.** Templates, layouts and design rules live in `post-templates/`, and the content step reads them before writing copy. Slideshows carry no diagrams on purpose: a wrong diagram looks right and slips past review.
 - **Fact-checking.** A fresh subagent with no memory of how the copy was written checks every factual claim and has to say what it actually checked, not just return a verdict.
 - **Verify-and-queue.** After rendering, another fresh subagent compares the size of the file actually stored against what the Worker reported, which catches the one failure that can look like a successful upload, and only then inserts the draft. Every post gets its own subagents and posts run one at a time, so a mistake in one can't leak into another, and each post can see the ones queued before it.
 - **Rendering.** Rendering runs in a separate Cloudflare Worker, `memora-render-worker`, which renders and uploads to Supabase Storage itself. Earlier attempts pushed image bytes through an LLM's tool calls, through this repo, and through Make.com; each was slow, fragile or blocked by the sandbox's network limits. This repo just queues a `render_requests` row; a database trigger hands it to the Worker. A small private repo, `memora-outreach-render-previews`, mirrors every render so the run's vision check can see it, since the container can't reach Storage directly.
-- **Review.** Finished posts are queued in `outreach_drafts`, which a small review dashboard reads; I approve, reject or schedule every post by hand. Posting itself will go through a Make.com hookup from the dashboard, never from a run.
+- **Review.** Finished posts are queued in `outreach_drafts`, which a small local review dashboard (`npm run dev`) reads; I approve, reject or schedule every post by hand. Approving doesn't post anything yet: the posting automation hasn't been built, and it will run from the dashboard side, never from a run.
 
 ## status
 

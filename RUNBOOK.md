@@ -1,22 +1,27 @@
 # Batch run
 
-The brief for the scheduled task. Every firing starts a **fresh, empty cloud container with no memory of how any of this was built**, so this file is the whole story — read it in full before doing anything. This file is meant to be self-contained -- everything needed to run a batch end to end is here.
+The brief for the daily **Claude Code routine** ("Memora outreach posts", claude.ai/code/routines) that makes Memora's single-image and slideshow posts and queues them as drafts for Armaan's review. Every run starts a **fresh cloud session with no memory of how any of this was built**, so this file is the whole story: read it in full before doing anything. (Reels are a separate routine with their own brief, `reels/REELS-RUNBOOK.md`; nothing here applies to them.)
 
 ## Where you are
 
-**A Cowork scheduled task running entirely in the cloud container — no device binding, and nothing here touches Armaan's Mac.** This isn't assumed, it's been checked (confirmed 2026-09-04): Playwright/Chromium is pre-installed, real outbound network reaches npm/PyPI/GitHub, and the Supabase MCP connector works — **but is proxied outside this container's own restricted shell egress**, the same way memora-growth's MCP connectors are proxied outside ITS shell's zero-network local Mac environment. Concretely: **the plain shell cannot reach `*.supabase.co` directly** (confirmed by the capability test's own failed raw upload attempt, and reconfirmed 2026-09-05 against Make.com's webhook host too — this is a general outbound allowlist, not a Supabase-specific block) — every Supabase read, write, and file upload in this run goes through `execute_sql` (an MCP tool call), never through `curl`/`requests`/a raw HTTP client in the shell.
+A Claude Code cloud session on Anthropic's infrastructure, started by the routine's schedule. Nothing here touches Armaan's Mac. What you can reach, and how:
 
-**First step of every run, before anything else:**
+- **Repositories (already cloned on their default branches by the routine; never clone them yourself):**
+  `memora-outreach-bot` (this pipeline: templates, `pipeline/`, `topics.json`, `claude-knowledge/`) and
+  `memora-outreach-render-previews` (private; the render worker pushes a copy of every finished render there, which is how you see it in Stage 5). Find both and give them fixed names before anything else:
+  ```bash
+  for d in "$PWD" "$PWD"/.. ~ /home/*; do for r in "$d"/*/; do u=$(git -C "$r" remote get-url origin 2>/dev/null) || continue
+    case "$u" in *memora-outreach-bot*) ln -sfn "${r%/}" ~/ob;; *memora-outreach-render-previews*) ln -sfn "${r%/}" ~/previews;; esac; done; done
+  ls -l ~/ob ~/previews && cd ~/ob
+  ```
+  If `~/ob` is missing, stop and report "the routine's repository list is missing memora-outreach-bot". If only `~/previews` is missing, carry on and use Stage 5's fallback.
+  Run every command below from `~/ob`. Your working files (`history_raw.json`, `content.json`, ...) live there as untracked files; nothing is ever committed.
+- **Supabase: only through the Supabase connector** (`execute_sql`, `get_project`). Project `memora-outreach` (id `dtyiuknezuzqohdxicbg`), the isolated outreach project, never memora-web's (the connector can see both; never touch the other one). The session's shell has no route to `*.supabase.co` or the render worker's `*.workers.dev` URL, and doesn't need one.
+- **GitHub: git only, through the session's GitHub proxy**, for the two attached repositories.
 
-```bash
-git clone <REPO_URL> outreach-bot && cd outreach-bot
-```
+Rendering does not happen in this session: Stage 4 queues it to `memora-render-worker` (a Cloudflare Worker) through a database row and polls for the result.
 
-`<REPO_URL>` — filled into the scheduled task's own prompt, not here, so this file doesn't go stale if the URL ever changes. A fresh container has nothing on disk otherwise: no templates, no `topics.json`, no `pipeline/` scripts.
-
-Supabase project: `memora-outreach` (id `dtyiuknezuzqohdxicbg`, `https://dtyiuknezuzqohdxicbg.supabase.co`). This is the isolated dashboard project, not memora-web's — never point anything at memora-web's project.
-
-Rendering itself does not happen in this container at all — it's queued to `memora-render-worker` (a separate Cloudflare Worker; see that repo's SETUP.md) and polled for. That Worker's own `*.workers.dev` URL is **also** unreachable directly from this container's shell, confirmed the same way as the `*.supabase.co` block above (2026-09-11) — so is `raw.githubusercontent.com` and `cdn.jsdelivr.net`, for what it's worth. `api.github.com` is the one arbitrary host that same proxy does let through, which is the only reason Stage 5 below is possible at all — see that stage for why.
+**Before Stage 0, check the project is awake:** `get_project` for `dtyiuknezuzqohdxicbg`. Free projects pause after about a week idle. If its status isn't `ACTIVE_HEALTHY`, stop and report "memora-outreach is paused: restore it in the Supabase dashboard, then run the routine again." Never restore it yourself.
 
 ## Hard rules
 
@@ -84,6 +89,8 @@ retired or added). Retired items are ones answered right every time; reworded on
 ones target exactly what the note says was missed. Use "deck"/"cards" or "quiz"/"questions" consistently with `eyebrow` and
 `material_label`. Never say rebuilding is free (it costs credits); the cards and questions are subject claims and get fact-checked.
 
+**comparison** is two full-width bands stacked one above the other: `old_title` / `old_items` (the old way) on top, `new_title` / `new_items` (with Memora) below. 2-4 items per band, ideally the same number in both, each short enough to sit on one line (about 45 characters or fewer). Every `new_items` line is a product claim and gets checked against `memora-overview.md` like any other.
+
 **stat-hero's `stat_unit` has a hard 3-line cap.** Unlike the headline, it has no auto-shrink at render time -- if it comes out past 3 lines the Worker throws and the render fails outright, not a style nit. Keep it well under 40 characters if you can; actual wrapping depends on word shapes as much as raw character count (a few short common words wrap far more forgivingly than one long compound one), so when in doubt, write it shorter than you think you need to.
 
 **Slideshows' closing (`type: "closer"`) slide must be freshly written every time, tied to the specific topic just covered -- never reuse `content-example.json`'s closer text as-is.** Its `heading` and `text` should read like the last beat of *this* topic's story (a callback to what the deck just covered, a one-line takeaway, a reason it mattered) -- if the exact same words would fit unedited onto a completely different topic's deck, rewrite them. `cta` can stay a simple "Link in bio"; it's the `heading`/`text` that need to change post to post.
@@ -125,31 +132,30 @@ Loop with a short pause between checks (this container has no scheduler of its o
 
 ### Stage 5 — Look at it (you, Claude, vision)
 
-Required for every post, both formats — same requirement as always, just a different route to the actual pixels. The rendered image only exists in Supabase Storage now (there's no local file on this container's own disk to `Read`), and this container's egress proxy blocks `*.supabase.co` and `*.workers.dev` outright (confirmed 2026-09-11 — see "Where you are" above), so neither Storage's public URL nor the Worker itself is directly reachable from here. `memora-render-worker` also pushes a copy of each rendered image to a small private GitHub repo for exactly this reason (see that repo's `src/index.js`, `pushPreview`).
+Required for every post, both formats. The rendered image only exists in Supabase Storage, which the session's shell can't reach, so `memora-render-worker` also pushes a copy of each render to the private `memora-outreach-render-previews` repository at `preview/<render_requests id>/<n>.jpg` (see that repo's `src/index.js`, `pushPreview`). The routine attaches that repository, so:
 
-Fetch that copy over git, not the REST Contents API — `api.github.com`'s Contents/tarball endpoints are gated by a session-level repo allowlist this container can't satisfy (confirmed 2026-09-12: same 403 regardless of whether the target repo is public or private), but plain git-over-HTTPS against `github.com` is not. A partial, sparse clone keeps this fast and bounded even as the previews repo accumulates every image it's ever received:
-
-1. Get the preview token — used only as a header value in step 2, never written into this run's own output or into any git config on disk:
-   ```sql
-   select decrypted_secret from vault.decrypted_secrets where name = 'github_preview_token';
-   ```
-2. Once per render (not once per image): fetch just this render's own folder, nothing else in the repo's history —
+1. Once `render_requests.status` is `done`, update the clone:
    ```bash
-   rm -rf preview_fetch && mkdir preview_fetch && cd preview_fetch
-   AUTH=$(printf 'x-access-token:%s' '<token from step 1>' | base64 | tr -d '\n')
-   git -c http.extraHeader="Authorization: Basic ${AUTH}" \
-       clone --no-checkout --depth 1 --filter=blob:none \
-       https://github.com/Armaan-Mahajan/memora-outreach-render-previews.git .
-   git sparse-checkout set --no-cone "preview/<render_requests id>"
-   git checkout
-   cd ..
-   unset AUTH
+   git -C ~/previews pull --ff-only --quiet
+   ls ~/previews/preview/<render_requests id>/
    ```
-   Use **Basic** auth, not Bearer -- GitHub's git-over-HTTPS smart protocol wants a PAT as an HTTP Basic password (username can be any non-empty string; `x-access-token` is the GitHub-documented convention). A raw `Authorization: Bearer <token>` header gets a 401 (confirmed 2026-09-12, first live run) -- go straight to Basic, don't rediscover this by trial and error each time. `-c http.extraHeader=...` is scoped to that one command -- it's never written into `.git/config`, and `unset AUTH` clears the encoded credential from the shell's environment once the clone finishes. `--filter=blob:none` plus the sparse-checkout means only this render's own images are ever downloaded, not the whole repo's accumulated history.
-3. `Read` each `preview_fetch/preview/<render_requests id>/<n>.jpg` in order (`1` for a single-image card, `1..slide_count` for a slideshow). There's no single contact-sheet image to lean on anymore now that rendering happens in the Worker — for slideshows, walk every slide individually. Check for orphaned words, cramped/empty composition, whether the cover earns a swipe (slideshows), whether the deck reads as a coherent sequence. Output: pass, or a specific list of fixes.
-4. `rm -rf preview_fetch` once you're done looking — don't let clones pile up across posts in the same run.
+   The worker pushes the preview just after it marks the row done; if the folder isn't there yet, `sleep 10` and pull again (up to 6 times).
+2. `Read` each `~/previews/preview/<render_requests id>/<n>.jpg` in order (`1` for a single-image card, `1..slide_count` for a slideshow; walk every slide). Check for orphaned words, cramped or empty composition, text that collides or overflows, whether the cover earns a swipe (slideshows) and whether the deck reads as a coherent sequence. Output: pass, or a specific list of fixes.
 
-If the clone itself fails — an expired token, an auth error, or `pushPreview` silently not landing a copy (it's deliberately best-effort on the Worker's side, so a GitHub hiccup there never fails an otherwise-good render) — that's still a Stage 5 failure: don't ship a post you couldn't actually look at. Report it and let Stage 6 or the stop-and-report path handle it.
+**Fallback, only if `~/previews` is missing** (the repository isn't attached): read the token with
+`select decrypted_secret from vault.decrypted_secrets where name = 'github_preview_token';` and fetch just this render's folder:
+```bash
+rm -rf ~/preview_fetch && mkdir ~/preview_fetch && cd ~/preview_fetch
+AUTH=$(printf 'x-access-token:%s' '<token>' | base64 | tr -d '\n')
+git -c http.extraHeader="Authorization: Basic ${AUTH}" clone --no-checkout --depth 1 --filter=blob:none \
+    https://github.com/Armaan-Mahajan/memora-outreach-render-previews.git .
+git sparse-checkout set --no-cone "preview/<render_requests id>"
+git checkout
+unset AUTH; cd ~/ob
+```
+Use **Basic** auth with the token as the password (a `Bearer` header gets a 401), never write the token into a file or git config, read the images from `~/preview_fetch/preview/<id>/`, then `rm -rf ~/preview_fetch`.
+
+If the preview never arrives or can't be fetched, that's still a Stage 5 failure: don't queue a post you couldn't look at. The worker's preview push is best-effort, so report it and let Stage 6 or the stop-and-report path handle it.
 
 ### Stage 6 — Repair loop
 
@@ -188,10 +194,36 @@ python3 pipeline/publish.py insert-sql \
   --notes "<Stage 3 / Stage 7 flags, or omit>"
 ```
 
-Run the printed `sql` via `execute_sql` once, then re-query the row back by its returned `id` to confirm it actually exists with `status = 'pending'` and the expected `asset_urls` — don't just trust the INSERT's own "returning id" as proof it landed. That's the draft queued as `status='pending'` for Armaan's dashboard review — nothing posts to Instagram itself yet (Make.com automation for posting is a separate, later build, unrelated to any of the above).
+Run the printed `sql` via `execute_sql` once, then re-query the row back by its returned `id` to confirm it actually exists with `status = 'pending'` and the expected `asset_urls` — don't just trust the INSERT's own "returning id" as proof it landed. That's the draft queued as `status='pending'` for Armaan's dashboard review. Nothing posts to Instagram: there is no posting automation yet, so approving a draft in the dashboard only changes its status.
 
 One fresh subagent per post here too, same reasoning as Stage 3.
 
 ### Stage 9 — Report
 
-Per post: made / flagged / failed, with reasons. Stdout is fine for now — the dashboard is the real review surface, this is just for debugging a run that didn't go as expected.
+Your final message is the report Armaan reads, so make it scannable:
+
+1. One line per post: `post <n>`: format, feature or topic, layout, headline, and **queued**, **queued with flags** (what Stage 3 / Stage 7 flagged) or **failed** (the stage and the reason). Then the batch total (e.g. "4 of 5 queued") and any repair attempts.
+2. Then, if at least one draft was queued, how to review them, as **copyable commands in their own fenced `bash` blocks** (exactly these, so he can paste them into his Mac's terminal):
+
+   Start the review dashboard:
+   ```bash
+   cd /Users/armaanmahajan/Documents/Projects/Memora/outreach-dashboard && npm run dev
+   ```
+   Then open it (in a second terminal tab, or paste the address into a browser):
+   ```bash
+   open http://localhost:3000
+   ```
+   Follow them with one line each: approve or reject each draft on the **Pending** tab; if port 3000 is already in use (for example by the demo app), Next.js picks the next free port and prints the address to open; stop the server with Ctrl+C when done. And say plainly: **approving doesn't post anything yet**, since there's no posting automation; it only marks the draft approved (rejected drafts are kept so their angles aren't reused).
+3. If nothing was queued, skip the commands and say what stopped the batch.
+
+Don't attach the report or the images as files: the drafts are in the dashboard.
+
+## Hard limits
+
+- **Database:** only the SQL this RUNBOOK names: the `get_project` check, Stage 0's two `select`s, Stage 4's insert (exactly as `publish.py render-request-sql` prints it) and its status poll, Stage 8's `storage.objects` size check and insert (exactly as `publish.py insert-sql` prints it) and its read-back, and Stage 5's fallback Vault read. Never hand-write an insert. No `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE` or other DDL, no RLS or policy changes, nothing on any other table, nothing on any other Supabase project.
+- **Vault:** read only `github_preview_token`, and only for Stage 5's fallback. Never print, echo or log a secret.
+- **Repositories:** never edit, commit or push anything. Your only git commands are Stage 5's `pull` in `~/previews` (or its fallback clone in `~/preview_fetch`) and the lookup at the top of this file.
+- **Shell:** the repository lookup and `ls`; `python3 pipeline/history.py|assign.py|checks.py|publish.py` with the arguments shown here (never `python3 -c` or any other script); `sleep`; `cd`, `mkdir`; `rm -rf` on `~/preview_fetch` only; and the fallback's `printf | base64 | tr` with `unset AUTH`. Write JSON files with the file tools. No `curl`, `wget`, `ssh`, `chmod`, `sudo` or package installs.
+- **Subagents:** one fresh subagent per post per stage (Stages 3 and 8), never one subagent for two posts.
+- **Failures:** one bad post fails alone and the batch carries on; a systemic failure (Supabase unreachable, every render failing, the worker not responding) stops the batch and gets reported.
+- **Posting:** drafts only. Never post to Instagram or anywhere else, and never change a draft's status.

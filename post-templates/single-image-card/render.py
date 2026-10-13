@@ -228,8 +228,8 @@ LAYOUTS = {
     },
     "comparison": {
         "list_fields": {
-            "left_items": lambda items: build_comparison_rows(items, "old"),
-            "right_items": lambda items: build_comparison_rows(items, "new"),
+            "old_items": lambda items: build_comparison_rows(items, "old"),
+            "new_items": lambda items: build_comparison_rows(items, "new"),
         },
         "fit_max_lines": 2,
         "fit_min_px": 38,

@@ -190,14 +190,27 @@ in the **same style as the single-image posts** — read the caption rules in th
 Before replying, check each caption against earlier ones: write it to `~/reels-run/history/caption-<n>.txt` and run
 `python3 ~/ob/reels/plan/history.py check-caption ~/reels-run/history/caption-<n>.txt ~/reels-run/assignment.json`. If it's
 flagged, rewrite it until it isn't (a different opening line and angle, not synonyms).
-Reply with one block per approved reel, headed with its file name, the caption ready to paste and the hashtags on the last line.
+Reply in the chat itself, never as an attached file (no `SendUserFile`, no `.txt` attachments): for each approved reel, a
+one-line heading with its file name, then the whole caption inside its own fenced code block marked `txt`, so the chat shows a
+copy button and Armaan can paste it into Instagram as is. The block holds exactly what gets pasted: the caption, a blank line,
+then the 5 hashtags on one line, with no heading, quotes or notes inside it. For example:
+
+`2026-10-14-reel 1.mp4`
+````
+```txt
+<caption paragraphs>
+
+#tag1 #tag2 #tag3 #tag4 #memora
+```
+````
+Anything else you want to say (what you changed after a check-caption flag, say) goes outside the blocks.
 Then record the verdict: write `~/reels-run/history/verdict.json` —
 `{"approved": [{"reel_no": 1, "caption": "…", "hashtags": ["#…", "#…", "#…", "#…", "#memora"]}], "rejected": [2, 3]}` (every reel
 sent today is either approved or rejected) — run `python3 ~/ob/reels/plan/reel_sql.py verdict <date> ~/reels-run/history/verdict.json`
 and run its SQL with `execute_sql`. If Armaan later changes a caption or his mind, write the new verdict and run it again.
 (If the session was restored after being idle and `~/reels-run` is gone, redo stage 1's lookup, re-run stage 3's two queries and
 `assign` with today's date to rebuild `assignment.json`, and write the files again.)
-If the reels went out by branch (stage 9 step 2), also commit the same blocks as `<date>/captions.md` on that branch and push
+If the reels went out by branch (stage 9 step 2), also commit the same captions as `<date>/captions.md` on that branch and push
 it (if the session was restored after being idle and `~/reels-out` is gone, redo stage 1's lookup and
 `git checkout claude/reels-<date>` first).
 Nothing gets posted: Armaan uploads the reels and captions himself; the only thing stored is the `outreach_reels` record. If he asks for changes, revise and reply again.
