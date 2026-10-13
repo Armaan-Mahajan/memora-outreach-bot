@@ -7,12 +7,18 @@
 // during `speed: fast`), fires whatever came due, seeks the animations, then takes one screenshot. A slow screenshot
 // therefore can't cause stutter — the page simply waits for it. vproxy.cjs releases the app's responses on the same
 // clock (GET /__vt), so generation streams at its real pace (or x× faster when sped up).
-import { chromium } from 'playwright'; import fs from 'fs'; import { execFileSync } from 'child_process';
+import { chromium } from 'playwright'; import fs from 'fs'; import { spawn } from 'child_process';
 const reel = JSON.parse(fs.readFileSync(process.argv[2] || 'reel.json', 'utf8'));
 const BASE = reel.base || 'http://localhost:3000', OUT = `out/${reel.name}`, SPEED = { x: 5, ...(reel.speed || {}) };
 const { w: W, h: H } = reel.viewport || { w: 1320, h: 860 };
 const FPS = 30, DT = 1000 / FPS, DPR = reel.dpr || 1.5;          // 1.5× covers the edit's deepest zoom (~1.33× needed)
-const T = Date.now(); fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT + '/frames', { recursive: true });
+const T = Date.now(); fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT, { recursive: true });
+// Frames are lossless PNG, streamed straight into a near-lossless H.264 encode (nothing written per frame). JPEG frames
+// made soft, slowly-animated surfaces (glass panels, glows, text over them) flicker and shift colour from frame to frame.
+const enc = spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'png', '-i', '-',
+  '-c:v', 'libx264', '-crf', '10', '-preset', 'medium', '-g', '300', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/clip.mp4`], { stdio: ['pipe', 'inherit', 'inherit'] });
+const encDone = new Promise((res, rej) => enc.on('close', c => c === 0 ? res() : rej(new Error(`ffmpeg exited ${c}`))));
+const put = buf => new Promise((res, rej) => enc.stdin.write(buf, e => e ? rej(e) : res()));
 
 const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR, colorScheme: 'dark' });
@@ -133,10 +139,10 @@ const frame = async (force = false) => {
   const changed = navPending ? false : await within(cdp.send('Runtime.evaluate', { expression: `window.__step ? window.__step(${dt}) : true`, returnByValue: true })
     .then(r => r.result?.value !== false), true);
   if (!capturing) return;
-  if (!navPending && (force || changed || !last)) { const t0 = Date.now(); const shot = await within(cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 90 }), null); if (shot) last = Buffer.from(shot.data, 'base64');
+  if (!navPending && (force || changed || !last)) { const t0 = Date.now(); const shot = await within(cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true }), null); if (shot) last = Buffer.from(shot.data, 'base64');
     shots++; maxShotMs = Math.max(maxShotMs, Date.now() - t0); }
   mouse.push([n, +mx.toFixed(1), +my.toFixed(1)]);
-  fs.writeFileSync(`${OUT}/frames/${String(n++).padStart(5, '0')}.jpg`, last);
+  await put(last); n++;
 };
 const holdMs = async ms => { const k = Math.max(0, Math.round(ms / (DT * rate))); for (let i = 0; i < k; i++) await frame(); };   // ms of APP time
 const until = async (cond, what, maxMs = 120000) => { const t0 = G; while (!(await cond().catch(() => false))) { if (G - t0 > maxMs) throw new Error(`timed out waiting for ${what}`); await frame(); } };
@@ -147,11 +153,16 @@ const box = async l => { const bb = await l.boundingBox(); return bb && { x: bb.
 const visible = l => async () => (await l.count()) > 0 && await l.isVisible();
 const rnd = (a, c) => a + Math.random() * (c - a);
 // stepped scroll of the page (or the largest scrollable element), eased, one position per output frame
-const steppedScroll = async (dy, ms, page) => {
-  await p.evaluate(page => { let el = document.scrollingElement;
+// `to`: 'bottom' | 'top' scrolls exactly to that end of the container (dy is ignored), e.g. to reveal a whole overflowing outline
+const steppedScroll = async (dy, ms, page, to) => {
+  const d = await p.evaluate(([page, to]) => { let el = document.scrollingElement;
     if (!page) { const els = [...document.querySelectorAll('*')].filter(e => { const o = getComputedStyle(e).overflowY; return (o === 'auto' || o === 'scroll') && e.scrollHeight > e.clientHeight + 50; });
-      el = els.sort((a, c) => c.clientHeight - a.clientHeight)[0] || el; }
-    window.__sEl = el; window.__sY0 = el.scrollTop; }, !!page);
+      // inside an open dialog, scroll the dialog (not the page behind it)
+      const dlg = document.querySelector('[role=dialog]'); const pool = dlg ? els.filter(e => dlg.contains(e)) : els;
+      el = (pool.length ? pool : els).sort((a, c) => c.clientHeight - a.clientHeight)[0] || el; }
+    window.__sEl = el; window.__sY0 = el.scrollTop;
+    return to === 'bottom' ? el.scrollHeight - el.clientHeight - el.scrollTop : to === 'top' ? -el.scrollTop : null; }, [!!page, to || null]);
+  if (d != null) dy = d;
   const k = Math.max(1, Math.round(ms / 1000 * FPS / rate));   // in a sped-up stretch scrolls are sped up too
   for (let i = 1; i <= k; i++) {
     await p.evaluate(([dy, u]) => { const e = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; window.__sEl.scrollTop = window.__sY0 + dy * e(u); }, [dy, i / k]);
@@ -212,7 +223,7 @@ const steps = {
     else await until(visible(loc(f)), JSON.stringify(f)); },
   press: async s => { if (s.target) { const l = loc(s.target); const bb = await moveTo(l); await holdMs(140); ev('click', { target: s.as || 'press', box: bb }); await press(); }
     for (let i = 0; i < (s.times || 1); i++) { await p.keyboard.press(s.key); ev('press', { key: s.key }); await holdMs(s.gap ?? 260); } },
-  scroll: async s => { ev('scroll', { dy: s.dy, ms: s.ms }); await steppedScroll(s.dy, s.ms, s.page); },
+  scroll: async s => { ev('scroll', { dy: s.dy, ms: s.ms, to: s.to }); await steppedScroll(s.dy ?? 0, s.ms, s.page, s.to); },
 };
 
 // login (real time, not recorded)
@@ -239,8 +250,7 @@ await frame(); ev('rec_end');
 fs.writeFileSync(`${OUT}/mouse.json`, JSON.stringify(mouse));
 fs.writeFileSync(`${OUT}/events.json`, JSON.stringify({ reel: reel.name, viewport: { w: W, h: H }, dpr: DPR, fps: FPS, frames: n, events }, null, 1));
 await b.close(); await fetch(`${BASE}/__real`).catch(() => {});
-execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-framerate', String(FPS), '-i', `${OUT}/frames/%05d.jpg`,
-  '-c:v', 'libx264', '-crf', '16', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', `${OUT}/clip.mp4`]);
+enc.stdin.end(); await encDone;   // near-lossless, long keyframe spacing: the edit re-encodes this clip, so it must not add its own pulsing
 const real = (Date.now() - T) / 1000;
 fs.writeFileSync(`${OUT}/capture.json`, JSON.stringify({ frames: n, clip_s: +(n / FPS).toFixed(2), screenshots: shots, reused: n - shots, slowest_screenshot_ms: maxShotMs, real_s: +real.toFixed(1) }, null, 1));
 console.log(`DONE ${OUT}/clip.mp4 — ${n} frames, ${(n / FPS).toFixed(1)}s video, ${shots} screenshots (${n - shots} reused), ${real.toFixed(0)}s real`);

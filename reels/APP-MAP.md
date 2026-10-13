@@ -56,6 +56,9 @@ steps to what's on screen and expect the recording to fail fast if a guess is wr
 - Agent `/agent`: textarea → Generate → outline (`/agent/…` outline, then course build) → course viewer. Content from `content/course.json`
   (7-9 nodes; the default demo course has 8, with authored content for nodes 1-3 and 7). The outline shows titles and subnodes
   only (no word estimates). The course viewer's sidebar lists every node; the existing scripts open nodes 1-3.
+  With 7-9 nodes the outline overflows its dialog: show it whole by scrolling the dialog to the bottom once the outline is done
+  (`{"do":"scroll","to":"bottom","ms":1800}`), click Proceed (it stays visible in the dialog footer), then — sped up — scroll back
+  to the top while the nodes build (`{"do":"scroll","to":"top","ms":6000}` ≈ 1.2 s on screen at 5×). `capture/reels/agent-*.json` do this.
   The "Click to redirect" toast doesn't navigate on camera within the 4 s `expect_url` window (the runner then loads the link
   directly), so put `"cut": true` on that click (as `capture/reels/agent-course.json` does): everything from the click until the
   viewer has loaded is edited out. `"cut": true` works on any click that navigates.

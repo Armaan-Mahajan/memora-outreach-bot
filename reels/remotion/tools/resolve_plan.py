@@ -73,7 +73,7 @@ def clip_to_reel(ct):
 
 # Named page regions the director's built-in rules frame (same as the fixed reels in src/Reel.tsx). A plan may override them.
 AGENT_REGIONS = {'dialog': {'x': 170, 'y': 32, 'w': 980, 'h': 796}, 'outline': {'x': 190, 'y': 90, 'w': 640, 'h': 430},
-                 'toast': {'x': 900, 'y': 16, 'w': 404, 'h': 110}, 'content': {'x': 395, 'y': 120, 'w': 830, 'h': 640}}
+                 'toast': {'x': 900, 'y': 16, 'w': 404, 'h': 110}}   # no 'content': the course viewer is shown full-page
 RESULTS_REGION = {'results': {'x': 330, 'y': 150, 'w': 660, 'h': 640}}
 DEFAULT_REGIONS = {'agent': AGENT_REGIONS, 'quiz': RESULTS_REGION, 'flashcards': RESULTS_REGION}
 

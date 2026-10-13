@@ -43,7 +43,10 @@ estimating faster is how lines end up ~25% too long). `validate` prints each lin
 if the words outrun the picture the last segment is held up to 3 s, beyond that `check` fails: cut words or lengthen a segment.
 Every reel keeps ≥ 1 s of picture after the last word.
 **Beats** (optional): the automatic camera frames typing (a read-zoom on the field, released 0.7 s after the typing ends unless
-another shot takes over), the Agent flow, and results pages. Everything else stays wide; add a beat to frame something it
+another shot takes over), the Agent flow, and results pages. In the Agent flow the outline and the build are framed as the
+**whole dialog** (every node in view), and a course is shown **full-page**; it zooms in only for a flashcard or quiz used
+inside a lesson — clicks whose `as` contains `card`, `flip`, `quiz`, `option`, `answer`, `check` or `mcq` — and goes back to
+full-page 1.6 s after the last one. Held shots are perfectly still (no slow push-in). Everything else stays wide; add a beat to frame something it
 wouldn't (a results panel, a chart, a card). `region` is one of:
 - `"box"` — **preferred**: the element the event recorded. Clicks record their target; for any other moment put `"mark"` and
   `"box": <target>` on the capture step (e.g. `{"do":"wait","for":{"text":"Review Complete"},"mark":"results_open","box":{"css":"…"}}`).
@@ -55,11 +58,12 @@ wouldn't (a results panel, a chart, a card). `region` is one of:
 ## capture.json
 `{"name": "<slug>", "start_url": "/autopilot", "viewport": {"w": 1320, "h": 860}, "steps": [...]}`
 Steps: `pause {ms ≤ 5000}` · `hover {target}` · `click {target, as?, expect_url?, cut?}` (cut: edit out the wait for the next page) · `type {text}` (≤ 180 chars total) ·
-`wait {for: {load|url|enabled|css|role+name|text}, cut?}` · `press {key, times?}` · `scroll {dy, ms}` · `speed {k: fast|normal, x?}` ·
+`wait {for: {load|url|enabled|css|role+name|text}, cut?}` · `press {key, times?}` · `scroll {dy | to: "top"|"bottom", ms}` (scrolls the
+open dialog if there is one, else the main scroll area; `to` goes exactly to that end) · `speed {k: fast|normal, x?}` ·
 any step can carry `"mark": "name"` (plus `"box": <target>` to record where an element is, for a `"box"` beat). Start URL per
 type is checked (`validate_capture.py`).
 The recorder is frame-stepped: animations are smooth at any speed, the real mouse glides to each target, a missing target fails
-in 20 s. Recording is slow in real time (roughly 8-10× the clip length), so keep scripts purposeful.
+in 20 s. Recording is slow in real time (roughly 10-13× the clip length: every frame is a lossless screenshot), so keep scripts purposeful.
 
 ## Reel.tsx
 ```tsx

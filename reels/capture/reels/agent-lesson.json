@@ -64,7 +64,17 @@
   },
   {
    "do": "pause",
-   "ms": 1600
+   "ms": 900
+  },
+  {
+   "do": "scroll",
+   "to": "bottom",
+   "ms": 1800,
+   "mark": "outline_scrolled"
+  },
+  {
+   "do": "pause",
+   "ms": 900
   },
   {
    "do": "click",
@@ -83,6 +93,11 @@
    "do": "speed",
    "k": "fast",
    "mark": "sped_up_start"
+  },
+  {
+   "do": "scroll",
+   "to": "top",
+   "ms": 6000
   },
   {
    "do": "wait",

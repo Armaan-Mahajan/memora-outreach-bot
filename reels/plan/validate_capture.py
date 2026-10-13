@@ -19,7 +19,7 @@ if not (isinstance(su, str) and su.startswith('/') and not su.startswith('//')):
 elif feat in START and not any(su == x or (x != '/' and su.startswith(x)) for x in START[feat]):
     problems.append(f'start_url "{su}" does not fit a {feat} reel (start at one of: {", ".join(START[feat])})')
 if cap.get('viewport', {'w': 1320, 'h': 860}) != {'w': 1320, 'h': 860}: problems.append('viewport must stay 1320×860 (the camera and window are built for it)')
-FIELDS = {'pause': {'ms'}, 'speed': {'k'}, 'mark': set(), 'hover': {'target'}, 'click': {'target'}, 'type': {'text'}, 'wait': {'for'}, 'press': {'key'}, 'scroll': {'dy', 'ms'}}
+FIELDS = {'pause': {'ms'}, 'speed': {'k'}, 'mark': set(), 'hover': {'target'}, 'click': {'target'}, 'type': {'text'}, 'wait': {'for'}, 'press': {'key'}, 'scroll': {'ms'}}
 steps = cap.get('steps', [])
 if not 3 <= len(steps) <= 120: problems.append(f'{len(steps)} steps (3-120)')
 typed = 0
@@ -30,6 +30,7 @@ for i, s in enumerate(steps):
         if f not in s: problems.append(f'step {i + 1} ({k}): needs "{f}"')
     if 'mark' in s and not re.fullmatch(r'[a-z][a-z0-9_]*', str(s['mark'])): problems.append(f'step {i + 1}: mark "{s["mark"]}" must be lowercase_with_underscores')
     if 'as' in s and not re.fullmatch(r'[a-z][a-z0-9_]*', str(s['as'])): problems.append(f'step {i + 1}: "as" must be lowercase_with_underscores')
+    if k == 'scroll' and not (('dy' in s) ^ (s.get('to') in ('top', 'bottom'))): problems.append(f'step {i + 1}: scroll needs "dy" (pixels) or "to": "top" | "bottom"')
     if k == 'pause' and not 0 <= s.get('ms', 0) <= 5000: problems.append(f'step {i + 1}: pause over 5 s')
     if k == 'speed':
         if s.get('k') not in ('fast', 'normal'): problems.append(f'step {i + 1}: speed k must be "fast" or "normal"')

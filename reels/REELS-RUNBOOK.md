@@ -82,7 +82,7 @@ Write `~/.reels-secrets.env` (`DEMO_PASSWORD=…`, `ELEVENLABS_API_KEY=…`, `ME
 cd ~ && (set -a; . ~/.reels-secrets.env; set +a; WORK=~/reels-run nohup bash ~/ob/reels/plan.sh prepare > ~/reels-console.log 2>&1 &)
 ```
 Then every 8 minutes: `sleep 480; cat ~/reels-run/status.json` (only `prepare` / `record` / `finish` write it; a `"failed"` there is real). It builds the app (≈10 min), then per reel: content → reset →
-record → voice. Recording runs roughly 8–10× slower than the clip. `"state": "done"` → stage 5. `"failed"` → stage 8.
+record → voice. Recording runs roughly 10–13× slower than the clip. `"state": "done"` → stage 5. `"failed"` → stage 8.
 No change for 40 minutes → treat as failed ("stalled at <stage>").
 
 ### 5. Check each reel

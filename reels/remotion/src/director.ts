@@ -10,7 +10,7 @@
 //    before the click); things the app does in response (dialog opens, toast, new page) are
 //    REACTED to (camera moves REACT s after they appear).
 // 3. Typing gets a READ zoom (S_TYPE) and the camera follows the caret.
-// 4. Long holds (> 3 s) get a slow 6% push-in so the frame never feels frozen.
+// 4. Held shots are perfectly still (no push-in, springs settle exactly), so a static page renders identical frames.
 // 5. A far jump (pan > 55% of the visible width) dips out to a wider zoom halfway, so the
 //    viewer keeps their bearings instead of seeing a whip-pan.
 // 6. Motion = the shot targets passed through TWO cascaded critically-damped springs on
@@ -84,15 +84,20 @@ export function direct(events: Ev[], regions: Regions, card: { w: number; hMax?:
   const oOpen = find('outline_open'), oDone = find('outline_done');
   // every built-in flow shot falls back to WIDE when its region isn't known, so an earlier zoom (e.g. on Generate) never lingers
   if (oOpen) shots.push({ t: oOpen.t + REACT, ...(regions.dialog ? fit(regions.dialog) : WIDE) });
-  if (oDone) shots.push({ t: oDone.t + REACT + 0.2, ...(regions.outline ? fit(regions.outline) : WIDE) });
-  const pro = clicks.find(c => c.target === 'proceed');
-  if (pro?.box) shots.push({ t: pro.t - LEAD, ...fit({ ...pro.box, x: pro.box.x - 260, w: pro.box.w + 300, y: pro.box.y - 120, h: pro.box.h + 160 }) });
+  // the outline and the build are shown whole: the camera frames the entire dialog so every node is in view
+  if (oDone) shots.push({ t: oDone.t + REACT + 0.2, ...(regions.dialog ? fit(regions.dialog) : WIDE) });
+  // (no zoom on Proceed: the whole outline stays in view through the click and the build)
   const cgs = find('course_gen_start');
-  if (cgs) shots.push({ t: cgs.t + REACT + 0.25, ...(regions.outline ? fit(regions.outline) : WIDE) });
+  if (cgs) shots.push({ t: cgs.t + REACT + 0.25, ...(regions.dialog ? fit(regions.dialog) : WIDE) });
   const cgd = find('course_gen_done');
   if (cgd && regions.toast) shots.push({ t: cgd.t + REACT, ...fit(regions.toast, 1.9) });
   const vo = find('viewer_open');
+  // a course is shown as the full page; the camera only moves in for a flashcard or quiz being used inside it
   if (vo) shots.push({ t: vo.t + 0.3, ...(regions.content ? fit(regions.content) : WIDE) });
+  if (vo) { const study = clicks.filter(c => c.t > vo.t && c.box && /card|flip|quiz|option|answer|check|mcq/i.test(c.target || ''));
+    for (const c of study) { const m = center(c.box!); shots.push({ t: c.t - LEAD, ...fit({ x: m.x - 380, y: m.y - 220, w: 760, h: 440 }, 1.6) }); }
+    const last = study[study.length - 1];
+    if (last) shots.push({ t: last.t + 1.6, ...WIDE, release: true } as any); }
   // generic rule for creation flows (quiz, flashcards): when the results page opens, frame its results column
   const ro = find('results_open');
   if (ro) shots.push({ t: ro.t + REACT + 0.25, ...(regions.results ? fit(regions.results) : WIDE) });
@@ -114,10 +119,10 @@ export function direct(events: Ev[], regions: Regions, card: { w: number; hMax?:
   shots.push({ t: (end ? end.t : dur) - 1.4, ...WIDE });
   shots.sort((a, b) => a.t - b.t);
 
-  // rule 4: slow push-in on long holds
-  const withHolds: Shot[] = [];
-  shots.forEach((sh, i) => { withHolds.push(sh); const next = shots[i + 1];
-    if (next && next.t - sh.t > 3 && sh.s < S_MAX) withHolds.push({ ...sh, t: next.t - 0.05, s: Math.min(sh.s * 1.06, S_MAX) }); });
+  // (rule 4, a slow push-in on long holds, is gone: a camera that never stops re-samples the page every frame and text
+  // shimmers — held shots are now perfectly still.)
+  // a study-zoom release yields to any shot that comes within 2.5 s after it was planned
+  const withHolds: Shot[] = shots.filter((sh: any, i) => !(sh.release && shots.some((o: any) => !o.release && o.t > sh.t - 1.6 && o.t <= sh.t + 0.9)));
   // rule 5: dip out on far jumps
   const plan: (Shot & { ramp?: boolean })[] = [];
   withHolds.forEach((sh, i) => { const prev = plan[plan.length - 1];
@@ -141,6 +146,11 @@ export function direct(events: Ev[], regions: Regions, card: { w: number; hMax?:
       for (const key of ['cx', 'cy', 'ls', 'hc'] as const) {
         v1[key] += (-2 * W * v1[key] - W * W * (s1[key] - tg[key])) * dt; s1[key] += v1[key] * dt;
         v2[key] += (-2 * W * v2[key] - W * W * (s2[key] - s1[key])) * dt; s2[key] += v2[key] * dt; } }
+    // settle exactly: springs only approach their target, so without this a "still" camera keeps moving by fractions of a
+    // pixel and every frame re-samples the page differently (text and fine detail flicker)
+    { const tg = clampH(target(f / fps)); const EPS = { cx: 0.08, cy: 0.08, ls: 1.5e-4, hc: 0.15 } as const;
+      if ((['cx', 'cy', 'ls', 'hc'] as const).every(key => Math.abs(s2[key] - tg[key]) < EPS[key] && Math.abs(s1[key] - tg[key]) < EPS[key] && Math.abs(v1[key]) < EPS[key] * 4 && Math.abs(v2[key]) < EPS[key] * 4))
+        for (const key of ['cx', 'cy', 'ls', 'hc'] as const) { s1[key] = s2[key] = tg[key]; v1[key] = v2[key] = 0; } }
     let s = Math.exp(s2.ls); s = Math.min(Math.max(s, S_WIDE), S_MAX);
     const h = Math.max(PAGE.h * S_WIDE, Math.min(H(s), s2.hc));   // zoom-based height, capped by the shot's need
     const vw = card.w / s, vh = h / s;               // rule 7: clamp inside the page

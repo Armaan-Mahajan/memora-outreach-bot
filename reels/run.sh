@@ -193,7 +193,7 @@ done
 for r in $REELS; do
   stage "render:$r"
   comp=$(rcfg "$r" composition); out="$WORK/out/$(rcfg "$r" output)"
-  render() { rm -f "$WORK/render-$1.mp4"; (cd "$RM" && npx remotion render src/index.ts "$comp" "$WORK/render-$1.mp4" --concurrency="$RENDER_CONC" --log=error \
+  render() { rm -f "$WORK/render-$1.mp4"; (cd "$RM" && npx remotion render src/index.ts "$comp" "$WORK/render-$1.mp4" --concurrency="$RENDER_CONC" --log=error --crf=14 --x264-preset=slow \
       --browser-executable="$CHROME_SHELL" >>"$LOG" 2>&1) && [ -s "$WORK/render-$1.mp4" ]; }
   retry 2 15 "render $r" render "$r" || fail "remotion render failed"
   ffmpeg -y -loglevel error -i "$WORK/render-$r.mp4" -c:v copy -af loudnorm=I=-15:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k "$out" \

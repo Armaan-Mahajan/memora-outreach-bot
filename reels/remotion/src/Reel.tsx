@@ -18,15 +18,14 @@ const REGIONS: Regions = {
   dialog: { x: 170, y: 32, w: 980, h: 796 },     // "Draft: Course Structure" modal
   outline: { x: 190, y: 90, w: 640, h: 430 },    // title + node/subnode tree inside the modal
   toast: { x: 900, y: 16, w: 404, h: 110 },      // "Course generated" toast, top-right
-  content: { x: 395, y: 120, w: 830, h: 640 },   // course viewer text column
+  // (no `content` region: the course viewer is shown as the full page)
 };
 const RESULTS: Regions = { results: { x: 330, y: 150, w: 660, h: 640 } };   // quiz / flashcard "Save" page: heading + preview list
 // Full-length reels (2026-10-03): per-reel beats tell the director what to frame beyond the built-in rules.
-const SIDEBAR = { x: 0, y: 60, w: 760, h: 430 };                 // course sidebar + the start of the text column
 const EMB_CARD = { x: 395, y: 215, w: 830, h: 480 };             // embedded flashcard inside a lesson (after the 330 px scroll)
 const QUIZ_Q = { x: 440, y: 185, w: 760, h: 270 };               // quiz viewer: question + options, check button at the right edge
 const STUDY_CARD = { x: 600, y: 440, w: 560, h: 320 };           // flashcard study view: card text + Correct/Incorrect buttons
-const NODE_BEATS: Beat[] = [{ ev: 'click:sidebar', i: 'all', region: SIDEBAR, s: 1.5 }, { ev: 'cut', i: 'all', dt: 0.2, region: REGIONS.content }];
+const NODE_BEATS: Beat[] = [{ ev: 'click:sidebar', i: 'all', region: 'WIDE' }, { ev: 'cut', i: 'all', dt: 0.2, region: 'WIDE' }];   // the course stays full-page
 // One entry per recording: runner events + voiceover + where its clip and audio live
 type Footage = { events: any; vo: any; clip: string; voDir: string; regions: Regions; beats?: Beat[] };
 export const FOOTAGE: Record<string, Footage> = {
@@ -36,7 +35,7 @@ export const FOOTAGE: Record<string, Footage> = {
   course: { events: courseEv, vo: courseVo, clip: 'footage/course/clip.mp4', voDir: 'vo/course/', regions: REGIONS, beats: NODE_BEATS },
   lesson: { events: lessonEv, vo: lessonVo, clip: 'footage/lesson/clip.mp4', voDir: 'vo/lesson/', regions: REGIONS, beats: [
     { ev: 'card_flip', dt: -0.6, region: EMB_CARD }, { ev: 'card_flip2', dt: 0.3, region: EMB_CARD, s: 1.45 },
-    { ev: 'subnode2', dt: 0.25, region: REGIONS.content }, ...NODE_BEATS] },
+    { ev: 'subnode2', dt: 0.25, region: 'WIDE' }, ...NODE_BEATS] },
   quizfull: { events: quizfEv, vo: quizfVo, clip: 'footage/quizfull/clip.mp4', voDir: 'vo/quizfull/', regions: RESULTS, beats: [
     { ev: 'click:slider', region: 'click', s: 1.8 }, { ev: 'click:save', region: 'click', s: 1.6 }, { ev: 'list_open', region: 'WIDE' },
     { ev: 'click:start', region: 'click', s: 1.5 }, { ev: 'viewer_open', dt: 0.35, region: QUIZ_Q }] },

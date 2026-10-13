@@ -155,7 +155,7 @@ if [ "$PHASE" = finish ]; then
     if [ -f "$WORK/check/$s/ok" ]; then OKS+=("$s"); elif [ ! -f "$WORK/dropped-$s.txt" ]; then drop "$s" "its check never passed"; fi; done
   [ "${#OKS[@]}" -gt 0 ] || fail "no reel passed its check"
   register_ok
-  render() { rm -f "$WORK/render-$1.mp4"; (cd "$RM" && npx remotion render src/index.ts "$1" "$WORK/render-$1.mp4" --concurrency="$RENDER_CONC" --log=error \
+  render() { rm -f "$WORK/render-$1.mp4"; (cd "$RM" && npx remotion render src/index.ts "$1" "$WORK/render-$1.mp4" --concurrency="$RENDER_CONC" --log=error --crf=14 --x264-preset=slow \
       --browser-executable="$CHROME_SHELL" >>"$LOG" 2>&1) && [ -s "$WORK/render-$1.mp4" ]; }
   for s in "${OKS[@]}"; do
     stage "render:$s"
