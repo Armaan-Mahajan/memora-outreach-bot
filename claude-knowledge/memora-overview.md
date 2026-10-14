@@ -32,7 +32,7 @@ High schoolers, roughly ages 13-18, across a genuinely global mix of curricula �
   right every time are **retired** (taking a break), unclear ones are **reworded**, and **new** ones are added for what they kept
   missing (e.g. a worked example). The rebuild can be undone, and Autopilot schedules the items around how the student did.
   Site copy: "Adaptive mode rebuilds a deck around what you keep missing." A rebuild costs credits (don't advertise it as free).
-- **Mora** — Memora's AI tutor. A chat interface with a canvas: diagramming (Mermaid, including AI diagram repair), math rendering (KaTeX), file upload, and a "flow" of chat nodes rather than a flat thread.
+- **Mora** — Memora's AI tutor. A chat interface with a canvas: diagramming (Mermaid, including AI diagram repair), math rendering (KaTeX), file upload (images and documents such as a student's notes, up to 3 files per conversation; the file itself goes to the AI with the message, so Mora answers from its contents), and a "flow" of chat nodes rather than a flat thread.
 - **Memora Agent** — the flagship, most differentiated feature. A student uploads a syllabus and the Agent generates a full structured interactive course: modules and subtopics, with flashcards and quizzes embedded directly into each node. Marketed on the site as "Available only on Memora." This is the feature to lead with in anything competitive or differentiating.
 - **Syllabus / curriculum organization** — subjects and topics structured against the student's selected curriculum board.
 - **Dashboard** — a home view across a student's courses, flashcard decks, quizzes, and flows.
