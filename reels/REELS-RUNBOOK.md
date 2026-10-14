@@ -100,6 +100,12 @@ hold ElevenLabs' own error code, e.g. `needs_authorization` = no key reached it,
 `missing_permissions` = the key can't do text to speech). Don't go looking for the values anywhere else.
 (memora-web needs no token: the routine's GitHub access covers the attached repository.)
 
+Before planning anything, check the voiceover will work (one tiny real request, a few characters of credit):
+```bash
+node ~/ob/reels/voice/check.mjs
+```
+`ok` → carry on. Anything else → stop and report its two lines word for word; planning reels that can't be voiced wastes the run.
+
 ### 3. Plan the reels
 1. Get today's assignment (`mkdir -p ~/reels-run/history` first). Run these two queries with the Supabase connector (`execute_sql` on `dtyiuknezuzqohdxicbg`) and save
    each result, as the plain JSON array of rows, with the file-writing tool:
@@ -230,7 +236,7 @@ Nothing gets posted: Armaan uploads the reels and captions himself; the only thi
 - Secrets: never read the Vault, never write a secret to disk, never print the environment (stage 2).
 - No posting anywhere: not Instagram, the outreach dashboard (`outreach_drafts` is read-only to you), or Supabase storage.
 - Shell: stage 1's lookup and links; `bash ~/ob/reels/plan.sh <phase> …`; `python3 ~/ob/reels/plan/history.py …` and
-  `python3 ~/ob/reels/plan/reel_sql.py …`; stage 9's git commands in `~/reels-out`; `sleep`,
+  `python3 ~/ob/reels/plan/reel_sql.py …`; `node ~/ob/reels/voice/check.mjs`; stage 9's git commands in `~/reels-out`; `sleep`,
   `cat`, `tail`, `ls`, `mkdir`, `readlink`. No curl, wget, package installs, or
   running the pipeline's inner scripts directly. Write plan files with the file tools.
 - The recording drives only the local demo app (`validate_capture.py` enforces it). Never point anything at the live site.

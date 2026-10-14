@@ -3,8 +3,9 @@
 //   cd ~/Documents/Projects/Memora/reel-lab
 //   node tts.mjs vo-script.json        (key read from reel-lab/.env: ELEVENLABS_API_KEY=sk_...)
 // Output: out/vo/<name>/line-<n>.mp3 + line-<n>.json (text, model, alignment) + manifest.json
-// Needs Node 18+ (built-in fetch). No npm packages.
+// Needs Node 18+ and curl. No npm packages.
 import fs from 'fs';
+import { curlFetch } from './http.mjs';   // every ElevenLabs request goes through curl: see http.mjs for why
 
 // Key: in the reels routine it's a network secret on the cloud environment, so the agent proxy adds the xi-api-key header
 // to requests for api.elevenlabs.io and this script never sees it (ELEVENLABS_API_KEY stays unset). Locally it comes from
@@ -23,7 +24,7 @@ const note = msg => { console.log(`  retry: ${msg}`); if (process.env.RETRY_LOG)
 async function call(url, opts, label) {
   for (let attempt = 1; ; attempt++) {
     let r = null, why;
-    try { r = await fetch(url, opts); why = r.status; } catch (e) { why = `network error (${e.cause?.code || e.message})`; }
+    try { r = await curlFetch(url, opts); why = r.status; } catch (e) { why = `network error (${e.cause?.code || e.message})`; }
     if (r && r.status === 401) {     // say why: ElevenLabs' own error code (invalid_api_key, missing_permissions, ...) is in the body
       let why = ''; try { const d = JSON.parse(await r.text()).detail; why = [d?.status, d?.message].filter(Boolean).join(': '); } catch {}
       throw new Error(`${label}: ElevenLabs answered 401${why ? ` (${why.slice(0, 240)})` : ''}. In the routine the key is a network secret ` +
