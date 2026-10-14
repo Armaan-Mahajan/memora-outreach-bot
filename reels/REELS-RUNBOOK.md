@@ -62,9 +62,9 @@ instead, in the reel's own words, e.g. "Sign up free.", "Start free.", "Try it f
 `validate` enforces both.
 
 ## Retrying temporary failures
-- **Your two Supabase calls** (stage 0 `get_project`, stage 2 Vault `select`): on a *connection* problem (timeout, "connection
+- **Your Supabase calls** (stage 0 `get_project`, stage 3's history `select`s, stage 9's SQL): on a *connection* problem (timeout, "connection
   terminated", reset/refused, "fetch failed", 5xx), `sleep 60` and retry, then `sleep 180` and retry once more. Any other error
-  stops the run: permission errors, refusals, a paused project, fewer than three secrets.
+  stops the run: permission errors, refusals, a paused project.
 - **Inside `plan.sh`**: clone, installs, demo reset, recordings, TTS and renders retry themselves a bounded number of times;
   `prepare` restarts itself once after 15 minutes if it fails before recording. Bad credentials are never retried.
 - **Your repairs** (stage 7) are bounded: at most **3** fix attempts per reel. Then drop it.
@@ -87,12 +87,16 @@ ls -l ~/ob ~/mw ~/reels-out
 If `memora-outreach-bot` or `memora-web` is missing, stop and report which (the routine's repository list needs fixing);
 `memora-reels` is only needed for stage 9's fallback. Never clone anything yourself.
 
-### 2. Secrets
-```sql
-select name, decrypted_secret from vault.decrypted_secrets where name in ('demo_password', 'elevenlabs_api_key');
-```
-Write `~/.reels-secrets.env` (`DEMO_PASSWORD=…`, `ELEVENLABS_API_KEY=…`) with the file-writing tool, then `chmod 600`.
-(memora-web needs no token: the routine's GitHub access covers the attached repository.) **Never** print, echo, log or repeat these values anywhere. Delete the file at the end of the run (stage 9) or on failure.
+### 2. Secrets (nothing to fetch)
+The routine's cloud environment supplies both, and you never handle either value:
+- `DEMO_PASSWORD` is an environment variable on the environment; `plan.sh` reads it itself.
+- The ElevenLabs key is a **network secret** on the environment: the proxy adds it to requests for `api.elevenlabs.io` after
+  they leave this session, so it isn't in your environment or on disk, and `plan.sh` doesn't need it.
+
+Never read secrets from Vault, never write a secret to a file, and never print the environment (`env`, `printenv`,
+`echo $DEMO_PASSWORD`). If `plan.sh` stops with "DEMO_PASSWORD not set" or "ElevenLabs rejected the request", the
+environment needs fixing: stop and report that line. Don't go looking for the values anywhere else.
+(memora-web needs no token: the routine's GitHub access covers the attached repository.)
 
 ### 3. Plan the reels
 1. Get today's assignment (`mkdir -p ~/reels-run/history` first). Run these two queries with the Supabase connector (`execute_sql` on `dtyiuknezuzqohdxicbg`) and save
@@ -122,7 +126,7 @@ Write `~/.reels-secrets.env` (`DEMO_PASSWORD=…`, `ELEVENLABS_API_KEY=…`) wit
 
 ### 4. Record (background)
 ```bash
-cd ~ && (set -a; . ~/.reels-secrets.env; set +a; MEMORA_WEB=$(readlink -f ~/mw) WORK=~/reels-run setsid nohup bash ~/ob/reels/plan.sh prepare > ~/reels-console.log 2>&1 < /dev/null &)
+cd ~ && (MEMORA_WEB=$(readlink -f ~/mw) WORK=~/reels-run setsid nohup bash ~/ob/reels/plan.sh prepare > ~/reels-console.log 2>&1 < /dev/null &)
 ```
 Then every 8 minutes: `sleep 480; cat ~/reels-run/status.json` (only `prepare` / `record` / `finish` write it; a `"failed"` there is real). It builds the app (≈10 min), then per reel: content → reset →
 record → voice. Recording runs roughly 10–13× slower than the clip. `"state": "done"` → stage 5. `"failed"` → stage 8.
@@ -143,7 +147,7 @@ that says something the footage doesn't show.
 |---|---|
 | Reel code / scene design / timeline / voice timing | edit `Reel.tsx` / `plan.json` → `check` |
 | Voice script or voice changed | edit `plan.json` → `plan.sh voice <slug>` → `check` |
-| The recording is wrong (wrong page, missed step), or `check` says RECORDING UNREADABLE | edit `capture.json` (+ `content/`) → `plan.sh record <slug>` (needs the secrets env, run it in the background like stage 4) → `check` |
+| The recording is wrong (wrong page, missed step), or `check` says RECORDING UNREADABLE | edit `capture.json` (+ `content/`) → `plan.sh record <slug>` (run it in the background like stage 4) → `check` |
 After 3 failed attempts, drop the reel: write the reason to `~/reels-run/dropped-<slug>.txt`.
 
 ### 8. Finish
@@ -151,7 +155,7 @@ After 3 failed attempts, drop the reel: write the reason to `~/reels-run/dropped
 stage 4 if more than 3 reels). Then read each `~/reels-run/out/<slug>-sheet.jpg` once more and `out/summary.json`.
 
 ### 9. Deliver
-`rm -f ~/.reels-secrets.env`. `finish` copies every passing reel to `~/reels-run/out/deliver/` as `<ISO date>-reel <n>.mp4`.
+`finish` copies every passing reel to `~/reels-run/out/deliver/` as `<ISO date>-reel <n>.mp4`.
 Put them **in this chat**, where Armaan reviews them:
 1. Look for a tool that sends files to the user (`SendUserFile`; if your tool list only names it as deferred, load it with
    ToolSearch first). It only sends files from folders the chat can open (`~` is `/root`, which it can't): first copy the three
@@ -219,12 +223,12 @@ Nothing gets posted: Armaan uploads the reels and captions himself; the only thi
 - Never edit, commit or push `memora-outreach-bot` or `memora-web` (`plan.sh` changes memora-web's working copy for recording;
   that's expected and never committed). The only push allowed is stage 9's fallback `claude/reels-<date>` branch of `memora-reels`
   (and its `captions.md`), and only when no file-sending tool exists. Your own files live in `~/reels-run/`.
-- Database: only stage 0's `get_project`, stage 2's single Vault `select`, stage 3's two history `select`s, and the SQL that
+- Database: only stage 0's `get_project`, stage 3's two history `select`s, and the SQL that
   `reel_sql.py` prints (stage 9's insert, the verdict's updates). No other SQL, ever: no DDL, no DELETE, nothing on any other table.
-- Vault: read only `demo_password` and `elevenlabs_api_key`. Never print secrets.
+- Secrets: never read the Vault, never write a secret to disk, never print the environment (stage 2).
 - No posting anywhere: not Instagram, the outreach dashboard (`outreach_drafts` is read-only to you), or Supabase storage.
 - Shell: stage 1's lookup and links; `bash ~/ob/reels/plan.sh <phase> …`; `python3 ~/ob/reels/plan/history.py …` and
   `python3 ~/ob/reels/plan/reel_sql.py …`; stage 9's git commands in `~/reels-out`; `sleep`,
-  `cat`, `tail`, `ls`, `mkdir`, `readlink`; `chmod 600` / `rm -f` on the secrets file. No curl, wget, package installs, or
+  `cat`, `tail`, `ls`, `mkdir`, `readlink`. No curl, wget, package installs, or
   running the pipeline's inner scripts directly. Write plan files with the file tools.
 - The recording drives only the local demo app (`validate_capture.py` enforces it). Never point anything at the live site.

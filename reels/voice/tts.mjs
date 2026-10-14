@@ -6,12 +6,13 @@
 // Needs Node 18+ (built-in fetch). No npm packages.
 import fs from 'fs';
 
-// Key comes from the environment or from reel-lab/.env (ELEVENLABS_API_KEY=...). It is never printed.
+// Key: in the reels routine it's a network secret on the cloud environment, so the agent proxy adds the xi-api-key header
+// to requests for api.elevenlabs.io and this script never sees it (ELEVENLABS_API_KEY stays unset). Locally it comes from
+// the environment or reel-lab/.env (ELEVENLABS_API_KEY=...). Either way it is never printed.
 if (!process.env.ELEVENLABS_API_KEY && fs.existsSync(new URL('./.env', import.meta.url))) {
   for (const line of fs.readFileSync(new URL('./.env', import.meta.url), 'utf8').split('\n')) {
     const m = line.match(/^\s*([A-Z_]+)\s*=\s*['"]?([^'"\s]+)['"]?\s*$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2]; } }
 const KEY = process.env.ELEVENLABS_API_KEY;
-if (!KEY) { console.error('No ELEVENLABS_API_KEY: put it in reel-lab/.env (see the comment at the top).'); process.exit(1); }
 const script = JSON.parse(fs.readFileSync(process.argv[2] || 'vo-script.json', 'utf8'));
 const API = process.env.ELEVENLABS_API_BASE || 'https://api.elevenlabs.io/v1';   // override only for tests
 // Temporary failures (network drop, 429 rate limit, 5xx) are retried up to 3 times with 5 s / 15 s pauses
@@ -23,6 +24,8 @@ async function call(url, opts, label) {
   for (let attempt = 1; ; attempt++) {
     let r = null, why;
     try { r = await fetch(url, opts); why = r.status; } catch (e) { why = `network error (${e.cause?.code || e.message})`; }
+    if (r && r.status === 401) throw new Error(`${label}: ElevenLabs answered 401, so no valid API key reached it. In the routine the key is a ` +
+      'network secret on the reels environment (host api.elevenlabs.io, header xi-api-key, no prefix); locally, set ELEVENLABS_API_KEY.');
     const temporary = !r || r.status === 429 || r.status >= 500;
     if (!temporary || attempt === 3) {
       if (attempt > 1) note(`${label}: ${r && r.ok ? `succeeded on attempt ${attempt} of 3` : `still failing after 3 attempts (${why})`}`);
@@ -33,7 +36,7 @@ async function call(url, opts, label) {
     await sleep(attempt === 1 ? 5000 : 15000);
   }
 }
-const H = { 'xi-api-key': KEY, 'content-type': 'application/json' };
+const H = KEY ? { 'xi-api-key': KEY, 'content-type': 'application/json' } : { 'content-type': 'application/json' };
 
 // Resolve the voice: a given id is used as is (Voice Library voices can be spoken by id without being in "My Voices",
 // and the speech call itself reports a bad id); with only a name, look it up among your voices.

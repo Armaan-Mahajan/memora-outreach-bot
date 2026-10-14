@@ -29,7 +29,7 @@ Voices rotate across four ElevenLabs voices on `eleven_v4`. The old fixed four-r
 Most runs happen while I'm asleep, so:
 
 - **Temporary failures retry, permanent ones don't.** Network errors, timeouts and rate limits are retried a small, fixed number of times (clone, installs, seed, each recording, each voiceover line, each render), with one whole-run restart if setup fails before recording starts. A bad token or wrong password stops the run immediately. Every retry is written into the run's summary.
-- **Secrets never touch disk in a repo.** The `memora-web` token is passed to git only as a one-off header for the clone and never written into `.git/config`; the ElevenLabs key lives only in Vault.
+- **Secrets never touch disk in a repo.** The `memora-web` token is passed to git only as a one-off header for the clone and never written into `.git/config`; in the cloud routine the ElevenLabs key is a network secret the proxy attaches to ElevenLabs requests, so the session never sees it, and the demo password is an environment variable on the routine's environment.
 
 ### what's next
 

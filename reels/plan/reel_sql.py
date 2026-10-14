@@ -16,7 +16,23 @@ import sys
 
 
 def q(v):
-    return 'NULL' if v is None else "'" + str(v).replace("'", "''") + "'"
+    """A SQL string written in printable ASCII only, with no backslashes: other characters (emoji, newlines, non-breaking
+    spaces) become chr(<code point>). This SQL is copied into an execute_sql tool call, and that trip decodes \\uXXXX escapes
+    and drops invisible characters (confirmed 2026-10-14), so plain ASCII is what arrives intact."""
+    if v is None:
+        return 'NULL'
+    parts, run = [], []
+    for ch in str(v):
+        if ' ' <= ch <= '~' and ch != '\\':
+            run.append("''" if ch == "'" else ch)
+        else:
+            if run:
+                parts.append("'" + ''.join(run) + "'")
+                run = []
+            parts.append(f'chr({ord(ch)})')
+    if run or not parts:
+        parts.append("'" + ''.join(run) + "'")
+    return parts[0] if len(parts) == 1 else '(' + ' || '.join(parts) + ')'
 
 
 def arr(vals):

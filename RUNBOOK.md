@@ -47,7 +47,8 @@ Run once per post in the batch (`--count` from the invocation; batch size/cadenc
   ```sql
   select json_build_object(
     'rows', coalesce(json_agg(t order by t.created_at desc, t.id), '[]'::json),
-    'check', md5(coalesce(string_agg(coalesce(t.headline, '') || chr(31) || coalesce(t.caption, ''), chr(30) order by t.created_at desc, t.id), ''))
+    'check', md5(coalesce(string_agg(translate(coalesce(t.headline, '') || chr(31) || coalesce(t.caption, ''),
+      chr(160) || chr(8239) || chr(8199) || chr(65039) || chr(65038) || chr(8205) || chr(8203), '   '), chr(30) order by t.created_at desc, t.id), ''))
   ) as history
   from (
     select id, format, feature, topic, archetype, layout, headline, caption, status, created_at
@@ -108,7 +109,7 @@ ones target exactly what the note says was missed. Use "deck"/"cards" or "quiz"/
 
 **Slideshows' closing (`type: "closer"`) slide must be freshly written every time, tied to the specific topic just covered -- never reuse `content-example.json`'s closer text as-is.** Its `heading` and `text` should read like the last beat of *this* topic's story (a callback to what the deck just covered, a one-line takeaway, a reason it mattered) -- if the exact same words would fit unedited onto a completely different topic's deck, rewrite them. `cta` can stay a simple "Link in bio"; it's the `heading`/`text` that need to change post to post.
 
-**Keep a number and its unit together** with a non-breaking space (U+00A0) in every on-image field: `2 kg`, `9.8 m/s²`, `25 min`. A plain space lets the line break between them, which costs a repair render.
+**Keep a number and its unit together** with a non-breaking space (U+00A0) in every on-image field, typed in `content.json` as the JSON escape `\u00a0`: `"2\u00a0kg"`, `"9.8\u00a0m/s²"`, `"25\u00a0min"`. A plain space lets the line break between them, which costs a repair render, and a raw non-breaking space is invisible, so it tends to get lost when text is retyped.
 
 **Don't make claims about what exam boards, syllabi or teachers say, call things or require** ("boards name these forces differently", "examiners want..."). They can't be sourced reliably and the fact-check will flag them. Teach the concept itself; if terminology genuinely varies, name both terms without attributing them to boards.
 

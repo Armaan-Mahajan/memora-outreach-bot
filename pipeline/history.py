@@ -105,6 +105,13 @@ def shape(rows, topic_usage=None):
     return result
 
 
+# Characters that don't survive being retyped from a query result into a file (they're dropped or become plain spaces).
+# The check ignores them on both sides -- RUNBOOK's query applies the same translate() -- so an honest copy passes, while a
+# shortened or reworded caption still fails. Spaces: no-break, narrow no-break, figure. Dropped: variation selectors 15/16,
+# zero-width joiner, zero-width space.
+INVISIBLE = {0xA0: " ", 0x202F: " ", 0x2007: " ", 0xFE0F: None, 0xFE0E: None, 0x200D: None, 0x200B: None}
+
+
 def load_checked(path, what):
     """Load a query result saved by the orchestrator, refusing one that was altered while it was copied out of execute_sql.
 
@@ -119,7 +126,7 @@ def load_checked(path, what):
         return data
     rows = data.get("rows") or []
     if what == "history":
-        text = "\x1e".join((r.get("headline") or "") + "\x1f" + (r.get("caption") or "") for r in rows)
+        text = "\x1e".join((r.get("headline") or "") + "\x1f" + (r.get("caption") or "") for r in rows).translate(INVISIBLE)
     else:
         text = ",".join(sorted(r.get("topic") or "" for r in rows))
     if hashlib.md5(text.encode("utf-8")).hexdigest() != data.get("check"):

@@ -17,7 +17,8 @@
 # whole-phase restart after RETRY_WAIT_RUN s (default 900). One reel failing to record or check is dropped (and reported);
 # the others carry on. Bad credentials stop everything at once. It never improvises.
 #
-# Env: DEMO_PASSWORD, ELEVENLABS_API_KEY, MEMORA_WEB_TOKEN (prepare / record / voice) · WORK (default ~/reels-run)
+# Env: DEMO_PASSWORD (prepare / record), set on the routine's cloud environment; the ElevenLabs key is a network secret there
+# (the proxy adds it to api.elevenlabs.io requests), or ELEVENLABS_API_KEY when run locally · WORK (default ~/reels-run)
 #      MEMORA_WEB (reuse a clone) · RETRY_FAST (tests: 1 s pauses) · CAPTURE_TIMEOUT (default 1800 s per recording)
 set -Eeuo pipefail
 
@@ -61,6 +62,18 @@ fail() {
       exec env RUN_ATTEMPT=2 MEMORA_WEB_TOKEN="${_MWT:-}" bash "$HERE/plan.sh" prepare
     fi;; esac; fi
   status failed "$1"; echo "FAILED at '$STAGE': $1" | tee -a "$LOG"; exit 1; }
+# ElevenLabs key check before any recording time is spent. In the routine the key is a network secret the agent proxy
+# attaches to api.elevenlabs.io requests (this shell never sees it); locally ELEVENLABS_API_KEY is sent instead. Nothing is
+# printed. A 401/403 that only says the key lacks the models permission still means a key arrived, so that passes; a
+# network problem passes too (TTS retries on its own).
+eleven_check() {
+  local hdr=() code tmp; tmp=$(mktemp)
+  [ -n "${ELEVENLABS_API_KEY:-}" ] && hdr=(-H "xi-api-key: ${ELEVENLABS_API_KEY}")
+  code=$(curl -s -o "$tmp" -w '%{http_code}' --max-time 20 "${hdr[@]}" https://api.elevenlabs.io/v1/models 2>/dev/null) || code=000
+  if { [ "$code" = 401 ] || [ "$code" = 403 ]; } && ! grep -q missing_permissions "$tmp"; then
+    rm -f "$tmp"; fail "ElevenLabs rejected the request (HTTP $code): no valid API key reached it. Add the key as a network secret on the reels environment (host api.elevenlabs.io, header xi-api-key, no prefix)"
+  fi
+  rm -f "$tmp"; return 0; }
 # only the main shell reports: with errtrace a failing command inside $(…) would otherwise run this in the subshell and
 # mark a healthy run "failed" (that was the stray "FAILED at … (line 48)" from pgrep finding no children)
 trap '[ "$BASH_SUBSHELL" = 0 ] && { status failed "command failed (line $LINENO) — see run.log"; echo "FAILED at $STAGE (line $LINENO)" >> "$LOG"; }' ERR
@@ -115,7 +128,7 @@ json.dump({'name': slug, 'voice_name': voice['name'], 'voice_id': voice['id'], '
 EOF
   rm -rf "$HERE/voice/out/vo/$s"; (cd "$HERE/voice" && node tts.mjs "$WORK/vo/$s.json" >>"$LOG" 2>&1); }
 if [ "$PHASE" = voice ]; then
-  stage "voice:$ARG"; [ -n "${ELEVENLABS_API_KEY:-}" ] || fail "ELEVENLABS_API_KEY not set"
+  stage "voice:$ARG"; eleven_check
   voice_one "$ARG" || fail "ElevenLabs TTS failed for $ARG"
   rm -f "$WORK/check/$ARG/ok"; status done "voiceover regenerated for $ARG — run check again"; exit 0
 fi
@@ -245,7 +258,7 @@ record_one() { local s=$1   # returns 1 (and drops the reel) on failure; stops t
 
 if [ "$PHASE" = record ]; then
   [ -d "$MW/.next" ] || fail "no built demo app at $MW (run prepare first)"
-  { [ -n "${DEMO_PASSWORD:-}" ] && [ -n "${ELEVENLABS_API_KEY:-}" ]; } || fail "DEMO_PASSWORD and ELEVENLABS_API_KEY must be set"
+  [ -n "${DEMO_PASSWORD:-}" ] || fail "DEMO_PASSWORD not set (the reels environment's variables)"; eleven_check
   o=$(validate_plan "$ARG" 2>&1) || { echo "$o" | tee -a "$LOG"; fail "plan $ARG is invalid — fix it first"; }
   stage servers; servers_up
   if ! record_one "$ARG"; then git -C "$MW" checkout --quiet -- demo-content; fail "could not record $ARG: $(cat "$WORK/dropped-$ARG.txt" 2>/dev/null)"; fi
@@ -256,8 +269,8 @@ fi
 stage preflight
 for c in node npm npx git ffmpeg ffprobe python3 curl; do command -v "$c" >/dev/null || fail "missing command: $c"; done
 retry 2 10 "pip install numpy/Pillow" py_deps || fail "python3 numpy/Pillow missing and could not be installed"
-[ -n "${DEMO_PASSWORD:-}" ] || fail "DEMO_PASSWORD not set"
-[ -n "${ELEVENLABS_API_KEY:-}" ] || fail "ELEVENLABS_API_KEY not set"
+[ -n "${DEMO_PASSWORD:-}" ] || fail "DEMO_PASSWORD not set (the reels environment's variables)"
+eleven_check
 [ -n "$CHROME_SHELL" ] || fail "no Chromium headless shell under /opt/pw-browsers"
 CPU_MODEL=$(lscpu 2>/dev/null | sed -n 's/^Model name:[[:space:]]*//p' | head -1); MEM_GB=$(awk '/MemTotal/ {printf "%.1f", $2/1048576}' /proc/meminfo 2>/dev/null)
 export HW="${CORES} core(s), ${CPU_MODEL:-unknown CPU}, ${MEM_GB:-?} GB RAM"; echo "$HW" > "$WORK/hardware.txt"

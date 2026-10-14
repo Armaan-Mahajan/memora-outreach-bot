@@ -81,16 +81,42 @@ def md5_hex(value) -> str:
     return hashlib.md5(("" if value is None else str(value)).encode("utf-8")).hexdigest()
 
 
+def sql_ascii(value) -> str:
+    """A string as a Postgres expression made only of printable ASCII, with no backslashes: every other character
+    (emoji, "·", non-breaking spaces, newlines, backslashes) is written as chr(<code point>) and concatenated.
+
+    Why: this SQL reaches the database as text the orchestrator copies into an execute_sql tool call, and that trip is lossy
+    in two confirmed ways (2026-10-14): JSON-style \\uXXXX escapes get decoded into the characters they stand for, and
+    invisible characters (non-breaking spaces, emoji variation selectors, zero-width joiners) get dropped or turned into
+    ordinary spaces when the text is retyped. Plain ASCII with no backslashes survives both exactly, so the md5 guard in
+    guarded_insert() passes whenever the SQL was copied faithfully. NULL for None.
+    """
+    if value is None:
+        return "NULL"
+    parts, run = [], []
+    for ch in str(value):
+        if " " <= ch <= "~" and ch != "\\":
+            run.append("''" if ch == "'" else ch)
+        else:
+            if run:
+                parts.append("'" + "".join(run) + "'")
+                run = []
+            parts.append(f"chr({ord(ch)})")
+    if run or not parts:
+        parts.append("'" + "".join(run) + "'")
+    return parts[0] if len(parts) == 1 else "(" + " || ".join(parts) + ")"
+
+
 def guarded_insert(table: str, text_cols: dict, casts: dict, returning: str) -> str:
     """An INSERT that only goes through if every value reached the database exactly as written here.
 
-    The orchestrator copies this SQL into execute_sql by hand. If anything in a caption, headline or content_json changes on
-    the way (an apostrophe, emoji, a non-breaking space, a decoded escape), the md5 guard doesn't match and NOTHING is
+    The orchestrator copies this SQL into execute_sql by hand. Values are written with sql_ascii() so the SQL is plain ASCII
+    that copies exactly; if anything still changes on the way, the md5 guard doesn't match and NOTHING is
     inserted: the statement returns no row instead of quietly queueing altered text. text_cols maps column -> text value
     (None allowed); casts maps column -> SQL type to cast the text to (jsonb, text[]) at insert time.
     """
     names = list(text_cols)
-    values = ", ".join(sql_string(text_cols[c]) for c in names)
+    values = ", ".join(sql_ascii(text_cols[c]) for c in names)
     guard = "\n  and ".join(f"md5(coalesce(v.{c}, '')) = '{md5_hex(text_cols[c])}'" for c in names)
     selected = ", ".join(f"v.{c}::{casts[c]}" if c in casts else f"v.{c}" for c in names)
     return (f"with v ({', '.join(names)}) as (\n  values ({values})\n)\n"
@@ -256,7 +282,7 @@ def cmd_render_request_sql(args):
     with open(args.content) as f:
         content = json.load(f)
 
-    cols = {"kind": args.kind, "layout": args.layout, "content": json.dumps(content)}
+    cols = {"kind": args.kind, "layout": args.layout, "content": json.dumps(content, ensure_ascii=False)}
     # Plain SQL on stdout (no JSON wrapper to decode): run it exactly as printed. No row back = it was altered in transit,
     # nothing was inserted -- see guarded_insert().
     print(guarded_insert("render_requests", cols, {"content": "jsonb"}, "id"))
@@ -277,7 +303,7 @@ def cmd_insert_sql(args):
         "subhead": content.get("subhead") or content.get("support"),
         "caption": args.caption or content.get("caption"),
         "hashtags": pg_text_array(args.hashtags or content.get("hashtags") or []),
-        "content_json": json.dumps(content),
+        "content_json": json.dumps(content, ensure_ascii=False),
         "asset_urls": pg_text_array(args.asset_urls),
         "topic": args.topic,
         "archetype": args.archetype,
