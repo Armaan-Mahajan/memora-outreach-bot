@@ -62,18 +62,22 @@ fail() {
       exec env RUN_ATTEMPT=2 MEMORA_WEB_TOKEN="${_MWT:-}" bash "$HERE/plan.sh" prepare
     fi;; esac; fi
   status failed "$1"; echo "FAILED at '$STAGE': $1" | tee -a "$LOG"; exit 1; }
-# ElevenLabs key check before any recording time is spent. In the routine the key is a network secret the agent proxy
-# attaches to api.elevenlabs.io requests (this shell never sees it); locally ELEVENLABS_API_KEY is sent instead. Nothing is
-# printed. A 401/403 that only says the key lacks the models permission still means a key arrived, so that passes; a
-# network problem passes too (TTS retries on its own).
+# ElevenLabs check before any recording time is spent: voice/check.mjs makes one real (tiny) text-to-speech request with the
+# same client as tts.mjs, so passing means the voiceover will authenticate. If it fails, the same request is repeated with
+# curl so the report shows whether the problem is the key/account (both fail) or how Node reaches the network (only Node
+# fails). Only status codes and ElevenLabs' error codes are printed, never the key.
 eleven_check() {
-  local hdr=() code tmp; tmp=$(mktemp)
-  [ -n "${ELEVENLABS_API_KEY:-}" ] && hdr=(-H "xi-api-key: ${ELEVENLABS_API_KEY}")
-  code=$(curl -s -o "$tmp" -w '%{http_code}' --max-time 20 "${hdr[@]}" https://api.elevenlabs.io/v1/models 2>/dev/null) || code=000
-  if { [ "$code" = 401 ] || [ "$code" = 403 ]; } && ! grep -q missing_permissions "$tmp"; then
-    rm -f "$tmp"; fail "ElevenLabs rejected the request (HTTP $code): no valid API key reached it. Add the key as a network secret on the reels environment (host api.elevenlabs.io, header xi-api-key, no prefix)"
-  fi
-  rm -f "$tmp"; return 0; }
+  local out rc=0 hdr=() cc tmp
+  out=$(cd "$HERE/voice" && node check.mjs 2>&1) || rc=$?
+  echo "$out" | tee -a "$LOG"
+  [ "$rc" = 0 ] && return 0
+  tmp=$(mktemp); [ -n "${ELEVENLABS_API_KEY:-}" ] && hdr=(-H "xi-api-key: ${ELEVENLABS_API_KEY}")
+  cc=$(curl -s -o "$tmp" -w '%{http_code}' --max-time 30 "${hdr[@]}" -H 'content-type: application/json' \
+       -d '{"text":"Hi.","model_id":"'"$(python3 -c "import json; print(json.load(open('$HERE/config.json')).get('voice_model','eleven_v4'))")"'"}' \
+       "https://api.elevenlabs.io/v1/text-to-speech/$(python3 -c "import json; print(json.load(open('$HERE/config.json'))['voices'][0]['id'])")?output_format=mp3_22050_32" 2>/dev/null) || cc=000
+  echo "elevenlabs check (curl, same request): HTTP $cc $(head -c 300 "$tmp" | tr -d '\n' | grep -o '"status":"[^"]*"' || true)" | tee -a "$LOG"; rm -f "$tmp"
+  [ "$rc" = 1 ] && { echo "  (network problem reaching ElevenLabs: the voiceover step retries on its own)" | tee -a "$LOG"; return 0; }
+  PERMANENT=1; fail "ElevenLabs refused the voiceover request: $(echo "$out" | head -1 | sed 's/^elevenlabs check: //') (see the two 'elevenlabs check' lines in run.log)"; }
 # only the main shell reports: with errtrace a failing command inside $(…) would otherwise run this in the subshell and
 # mark a healthy run "failed" (that was the stray "FAILED at … (line 48)" from pgrep finding no children)
 trap '[ "$BASH_SUBSHELL" = 0 ] && { status failed "command failed (line $LINENO) — see run.log"; echo "FAILED at $STAGE (line $LINENO)" >> "$LOG"; }' ERR

@@ -24,8 +24,10 @@ async function call(url, opts, label) {
   for (let attempt = 1; ; attempt++) {
     let r = null, why;
     try { r = await fetch(url, opts); why = r.status; } catch (e) { why = `network error (${e.cause?.code || e.message})`; }
-    if (r && r.status === 401) throw new Error(`${label}: ElevenLabs answered 401, so no valid API key reached it. In the routine the key is a ` +
-      'network secret on the reels environment (host api.elevenlabs.io, header xi-api-key, no prefix); locally, set ELEVENLABS_API_KEY.');
+    if (r && r.status === 401) {     // say why: ElevenLabs' own error code (invalid_api_key, missing_permissions, ...) is in the body
+      let why = ''; try { const d = JSON.parse(await r.text()).detail; why = [d?.status, d?.message].filter(Boolean).join(': '); } catch {}
+      throw new Error(`${label}: ElevenLabs answered 401${why ? ` (${why.slice(0, 240)})` : ''}. In the routine the key is a network secret ` +
+        'on the reels environment (host api.elevenlabs.io, header xi-api-key, no prefix); locally, set ELEVENLABS_API_KEY.'); }
     const temporary = !r || r.status === 429 || r.status >= 500;
     if (!temporary || attempt === 3) {
       if (attempt > 1) note(`${label}: ${r && r.ok ? `succeeded on attempt ${attempt} of 3` : `still failing after 3 attempts (${why})`}`);

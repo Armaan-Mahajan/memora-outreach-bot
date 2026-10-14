@@ -94,8 +94,10 @@ The routine's cloud environment supplies both, and you never handle either value
   they leave this session, so it isn't in your environment or on disk, and `plan.sh` doesn't need it.
 
 Never read secrets from Vault, never write a secret to a file, and never print the environment (`env`, `printenv`,
-`echo $DEMO_PASSWORD`). If `plan.sh` stops with "DEMO_PASSWORD not set" or "ElevenLabs rejected the request", the
-environment needs fixing: stop and report that line. Don't go looking for the values anywhere else.
+`echo $DEMO_PASSWORD`). If `plan.sh` stops with "DEMO_PASSWORD not set" or "ElevenLabs refused the voiceover request", the
+environment needs fixing: stop and report that line **and both `elevenlabs check` lines from `run.log`** word for word (they
+hold ElevenLabs' own error code, e.g. `needs_authorization` = no key reached it, `invalid_api_key` = a wrong key,
+`missing_permissions` = the key can't do text to speech). Don't go looking for the values anywhere else.
 (memora-web needs no token: the routine's GitHub access covers the attached repository.)
 
 ### 3. Plan the reels
